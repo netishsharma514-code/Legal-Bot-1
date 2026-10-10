@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Legal Bot"
+description = "The restored Legal Bot frontend for Indian legal information, document review, statutory lookup, and advocate consultation. This reinstates the uploaded React/Vite application and its existing routes, pages, and functionality."
+version = "1.0.0"
+id = "artifacts/legal-bot"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23793
+
+[services.development]
+run = "pnpm --filter @workspace/legal-bot run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/legal-bot", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/legal-bot/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23793"
+BASE_PATH = "/"

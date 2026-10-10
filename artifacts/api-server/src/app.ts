@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import type { ErrorRequestHandler } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
@@ -26,9 +27,20 @@ app.use(
   }),
 );
 app.use(cors());
-app.use(express.json());
+app.use("/api/analyze-document", express.json({ limit: "42mb" }));
+app.use(express.json({ limit: "14mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+const requestBodyErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
+  if ((error as { type?: string })?.type === "entity.too.large") {
+    res.status(413).json({ error: "Request body exceeds the supported upload size." });
+    return;
+  }
+  next(error);
+};
+
+app.use(requestBodyErrorHandler);
 
 export default app;

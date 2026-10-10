@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: legal
+    description: Legal Bot AI and document analysis operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,96 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /chat:
+    post:
+      operationId: sendLegalChatMessage
+      tags: [legal]
+      summary: Generate a legal-awareness response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalChatInput"
+      responses:
+        "200":
+          description: Generated answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalChatReply"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI unavailable; use the statutory fallback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /extract-document-text:
+    post:
+      operationId: extractLegalDocumentText
+      tags: [legal]
+      summary: Extract selectable text from a supported legal document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentExtractionInput"
+      responses:
+        "200":
+          description: Extracted document text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentExtractionResult"
+        "400":
+          description: Invalid request or unsupported format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "413":
+          description: File exceeds the supported size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Document is unreadable or has no selectable text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /analyze-document:
+    post:
+      operationId: analyzeLegalDocument
+      tags: [legal]
+      summary: Analyze a legal document and identify potential risks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentAnalysisInput"
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAnalysisEnvelope"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +125,200 @@ components:
           type: string
       required:
         - status
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+        fallback:
+          type: boolean
+        isScannedOrUnreadable:
+          type: boolean
+      required: [error]
+    LegalSection:
+      type: object
+      properties:
+        id: { type: string }
+        act: { type: string }
+        number: { type: string }
+        title: { type: string }
+        penalty: { type: string }
+        bailable: { type: boolean }
+        cognizable: { type: boolean }
+      required: [id, act, number, title]
+    LegalChatTurn:
+      type: object
+      properties:
+        sender:
+          type: string
+          enum: [user, assistant]
+        text:
+          type: string
+          maxLength: 20000
+      required: [sender, text]
+    LegalChatInput:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        matchedSections:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/LegalSection"
+        history:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/LegalChatTurn"
+      required: [message]
+    LegalChatReply:
+      type: object
+      properties:
+        reply: { type: string }
+        source:
+          type: string
+          enum: [gemini-3.8-flash, statutory-engine]
+      required: [reply, source]
+    DocumentExtractionInput:
+      type: object
+      properties:
+        base64:
+          type: string
+          maxLength: 14000000
+        filename:
+          type: string
+          maxLength: 255
+        mimeType:
+          type: string
+          maxLength: 255
+      required: [base64, filename]
+    DocumentExtractionResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        filename: { type: string }
+        text: { type: string }
+        characterCount: { type: integer }
+        estimatedWords: { type: integer }
+      required: [success, filename, text, characterCount, estimatedWords]
+    DocumentAnalysisInput:
+      type: object
+      properties:
+        documentText:
+          type: string
+          minLength: 1
+          maxLength: 10000000
+        documentName:
+          type: string
+          maxLength: 255
+      required: [documentText]
+    ExtractedParty:
+      type: object
+      properties:
+        role: { type: string }
+        name: { type: string }
+      required: [role, name]
+    ExtractedDate:
+      type: object
+      properties:
+        label: { type: string }
+        dateOrPeriod: { type: string }
+      required: [label, dateOrPeriod]
+    ExtractedClause:
+      type: object
+      properties:
+        clauseTitle: { type: string }
+        originalTextSnippet: { type: string }
+        purpose: { type: string }
+      required: [clauseTitle, originalTextSnippet, purpose]
+    ExtractedFacts:
+      type: object
+      properties:
+        documentType: { type: string }
+        subject: { type: string }
+        parties:
+          type: array
+          items: { $ref: "#/components/schemas/ExtractedParty" }
+        importantDates:
+          type: array
+          items: { $ref: "#/components/schemas/ExtractedDate" }
+        keyObligations:
+          type: array
+          items: { type: string }
+        importantClauses:
+          type: array
+          items: { $ref: "#/components/schemas/ExtractedClause" }
+      required: [documentType, subject, parties, importantDates, keyObligations, importantClauses]
+    FlaggedClause:
+      type: object
+      properties:
+        clauseTitle: { type: string }
+        severity:
+          type: string
+          enum: [Low, Medium, High]
+        issue: { type: string }
+        recommendation: { type: string }
+        relevantLaw: { type: string }
+      required: [clauseTitle, severity, issue, recommendation]
+    OfficialSource:
+      type: object
+      properties:
+        title: { type: string }
+        statute: { type: string }
+        url: { type: string }
+        relevance: { type: string }
+      required: [title, statute, url, relevance]
+    DocumentAnalysis:
+      type: object
+      properties:
+        summary: { type: string }
+        plainLanguageExplanation: { type: string }
+        documentType: { type: string }
+        subject: { type: string }
+        riskScore: { type: number, minimum: 0, maximum: 100 }
+        riskLevel:
+          type: string
+          enum: [Low, Medium, High]
+        governingLawCompliance: { type: string }
+        extractedFacts:
+          $ref: "#/components/schemas/ExtractedFacts"
+        flaggedClauses:
+          type: array
+          items: { $ref: "#/components/schemas/FlaggedClause" }
+        missingProtections:
+          type: array
+          items: { type: string }
+        positiveAspects:
+          type: array
+          items: { type: string }
+        recommendedNextSteps:
+          type: array
+          items: { type: string }
+        officialSources:
+          type: array
+          items: { $ref: "#/components/schemas/OfficialSource" }
+      required:
+        - summary
+        - plainLanguageExplanation
+        - documentType
+        - subject
+        - riskScore
+        - riskLevel
+        - extractedFacts
+        - flaggedClauses
+        - recommendedNextSteps
+        - officialSources
+    DocumentAnalysisEnvelope:
+      type: object
+      properties:
+        analysis:
+          $ref: "#/components/schemas/DocumentAnalysis"
+        source:
+          type: string
+          enum: [gemini-3.8-flash, statutory-engine]
+        notice: { type: string }
+      required: [analysis, source]
 
