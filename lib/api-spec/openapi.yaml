@@ -262,7 +262,10 @@ components:
         issue: { type: string }
         recommendation: { type: string }
         relevantLaw: { type: string }
-      required: [clauseTitle, severity, issue, recommendation]
+        evidenceSnippet:
+          type: string
+          maxLength: 600
+      required: [clauseTitle, issue, recommendation, evidenceSnippet]
     OfficialSource:
       type: object
       properties:
@@ -305,8 +308,6 @@ components:
         - plainLanguageExplanation
         - documentType
         - subject
-        - riskScore
-        - riskLevel
         - extractedFacts
         - flaggedClauses
         - recommendedNextSteps

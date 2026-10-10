@@ -96,6 +96,8 @@ export const AnalyzeLegalDocumentBody = zod.object({
 export const analyzeLegalDocumentResponseAnalysisRiskScoreMin = 0;
 export const analyzeLegalDocumentResponseAnalysisRiskScoreMax = 100;
 
+export const analyzeLegalDocumentResponseAnalysisFlaggedClausesItemEvidenceSnippetMax = 600;
+
 
 
 export const AnalyzeLegalDocumentResponse = zod.object({
@@ -104,8 +106,8 @@ export const AnalyzeLegalDocumentResponse = zod.object({
   "plainLanguageExplanation": zod.string(),
   "documentType": zod.string(),
   "subject": zod.string(),
-  "riskScore": zod.number().min(analyzeLegalDocumentResponseAnalysisRiskScoreMin).max(analyzeLegalDocumentResponseAnalysisRiskScoreMax),
-  "riskLevel": zod.enum(['Low', 'Medium', 'High']),
+  "riskScore": zod.number().min(analyzeLegalDocumentResponseAnalysisRiskScoreMin).max(analyzeLegalDocumentResponseAnalysisRiskScoreMax).optional(),
+  "riskLevel": zod.enum(['Low', 'Medium', 'High']).optional(),
   "governingLawCompliance": zod.string().optional(),
   "extractedFacts": zod.object({
   "documentType": zod.string(),
@@ -127,10 +129,11 @@ export const AnalyzeLegalDocumentResponse = zod.object({
 }),
   "flaggedClauses": zod.array(zod.object({
   "clauseTitle": zod.string(),
-  "severity": zod.enum(['Low', 'Medium', 'High']),
+  "severity": zod.enum(['Low', 'Medium', 'High']).optional(),
   "issue": zod.string(),
   "recommendation": zod.string(),
-  "relevantLaw": zod.string().optional()
+  "relevantLaw": zod.string().optional(),
+  "evidenceSnippet": zod.string().max(analyzeLegalDocumentResponseAnalysisFlaggedClausesItemEvidenceSnippetMax)
 })),
   "missingProtections": zod.array(zod.string()).optional(),
   "positiveAspects": zod.array(zod.string()).optional(),

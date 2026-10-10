@@ -161,9 +161,10 @@ export interface ChatSession {
 
 export interface FlaggedClause {
   clauseTitle: string;
-  severity: 'Low' | 'Medium' | 'High';
+  severity?: 'Low' | 'Medium' | 'High';
   issue: string;
   recommendation: string;
+  evidenceSnippet: string;
   relevantLaw?: string;
 }
 
@@ -204,8 +205,8 @@ export interface DocumentAnalysisResult {
   plainLanguageExplanation: string;
   documentType: string;
   subject: string;
-  riskScore: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
+  riskScore?: number;
+  riskLevel?: 'Low' | 'Medium' | 'High';
   governingLawCompliance?: string;
   extractedFacts: ExtractedFacts;
   flaggedClauses: FlaggedClause[];

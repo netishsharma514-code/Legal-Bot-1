@@ -25,8 +25,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { 
-  DocumentAnalysisResult, 
-  FlaggedClause
+  DocumentAnalysisResult
 } from '../data/types';
 import { getStoredLocation, UserLocationState } from '../data/location';
 import { DocumentLawyerConsultModal } from '../components/DocumentLawyerConsultModal';
@@ -35,6 +34,7 @@ import {
   useAnalyzeLegalDocument,
   useExtractLegalDocumentText,
 } from '@workspace/api-client-react';
+import { generateDocumentAnalysisFallback } from '@workspace/api-zod';
 
 interface UploadProps {
   onNavigateTab?: (tab: string) => void;
@@ -216,11 +216,11 @@ This Agreement is made on 10th February 2026 between Alpha Digital Ltd ("Disclos
         setAnalysisSource(response.source);
         setAnalysisNotice(response.notice || null);
       } else {
-        runLocalRuleAudit(documentText, documentName);
+        runLocalRuleAudit(documentText);
       }
     } catch (analysisErr) {
       console.error('Document analysis request failed; using local rule audit.', analysisErr);
-      runLocalRuleAudit(documentText, documentName);
+      runLocalRuleAudit(documentText);
     } finally {
       setIsAnalyzing(false);
     }
@@ -243,107 +243,11 @@ This Agreement is made on 10th February 2026 between Alpha Digital Ltd ("Disclos
     officialSources: raw.officialSources || [],
   });
 
-  const detectDocType = (text: string, title: string): string => {
-    const t = (text + ' ' + title).toLowerCase();
-    if (t.includes('rent') || t.includes('lease') || t.includes('tenan')) return 'Residential Rental Agreement';
-    if (t.includes('employ') || t.includes('service agreement') || t.includes('salary')) return 'Employment Agreement';
-    if (t.includes('nda') || t.includes('non-disclosure') || t.includes('confidential')) return 'Non-Disclosure Agreement (NDA)';
-    if (t.includes('vendor') || t.includes('master service') || t.includes('supplier')) return 'Commercial Vendor Contract';
-    if (t.includes('loan') || t.includes('promissory') || t.includes('borrower')) return 'Loan & Promissory Agreement';
-    return 'Not available in supplied text';
-  };
-
-  // Local fallback rule-based analyzer conforming to complete schema
-  const runLocalRuleAudit = (text: string, title: string) => {
-    const lower = text.toLowerCase();
-    const flagged: FlaggedClause[] = [];
-    let score = 25;
-
-    // Check non-compete
-    if (lower.includes('non-compete') || lower.includes('competing business')) {
-      flagged.push({
-        clauseTitle: 'Post-Termination Non-Compete Restriction',
-        severity: 'High',
-        issue: 'Agreements in restraint of trade are void under Section 27 of the Indian Contract Act, 1872.',
-        recommendation: 'Post-employment non-compete covenants are legally unenforceable in India. Replace with a narrow confidentiality and non-solicitation clause.',
-      });
-      score += 35;
-    }
-
-    // Check unilateral indemnity
-    if (lower.includes('indemnify') && (lower.includes('solely') || lower.includes('unilateral') || lower.includes('irrespective') || lower.includes('directors'))) {
-      flagged.push({
-        clauseTitle: 'Unilateral & Unlimited Indemnification Exposure',
-        severity: 'High',
-        issue: 'Exposes one party to uncapped financial liabilities without mutual indemnity or aggregate liability cap.',
-        recommendation: 'Cap maximum aggregate liability to fees received or a reasonable insurance cap, and exclude indirect or consequential damages.',
-      });
-      score += 25;
-    }
-
-    // Check termination without notice
-    if (lower.includes('without cause') && (lower.includes('without any notice') || lower.includes('immediately'))) {
-      flagged.push({
-        clauseTitle: 'Immediate Termination Without Notice or Severance',
-        severity: 'Medium',
-        issue: 'Deprives signatory of customary 30–60 day transition period.',
-        recommendation: 'Insert mandatory reciprocal 30-day written notice period for convenience termination.',
-      });
-      score += 15;
-    }
-
-    // Check unilateral arbitrator appointment
-    if (lower.includes('appointed solely') || lower.includes('sole arbitrator appointed by') || lower.includes('solely by the company')) {
-      flagged.push({
-        clauseTitle: 'Unilateral Appointment of Sole Arbitrator',
-        severity: 'High',
-        issue: 'Violates Supreme Court ruling in Perkins Eastman (2019) and Section 12(5) of Arbitration & Conciliation Act 1996.',
-        recommendation: 'Mandate mutual consent for appointing arbitrator or institutional appointment through High Court / DIAC.',
-      });
-      score += 20;
-    }
-
-    // Check foreign jurisdiction
-    if (lower.includes('outside the territory of india') || lower.includes('foreign court')) {
-      flagged.push({
-        clauseTitle: 'Ouster of Indian Court Jurisdiction',
-        severity: 'High',
-        issue: 'Indian parties contracting within India cannot confer exclusive jurisdiction on foreign courts to circumvent Indian laws.',
-        recommendation: 'Restructure jurisdiction to courts where cause of action arose or High Court in India.',
-      });
-      score += 20;
-    }
-
-    const finalScore = Math.min(score, 95);
-    const riskLevel: 'Low' | 'Medium' | 'High' = finalScore > 65 ? 'High' : finalScore > 40 ? 'Medium' : 'Low';
-    const docType = detectDocType(text, title);
-
-    const result: DocumentAnalysisResult = {
-      documentType: docType,
-      subject: 'Not available in supplied text',
-      summary: `Local keyword screening matched ${flagged.length} potential clause pattern(s). This is a limited fallback, not a legal opinion.`,
-      plainLanguageExplanation: 'This local fallback checks selected text patterns only. No additional factual details are available from this analysis.',
-      riskScore: finalScore,
-      riskLevel,
-      governingLawCompliance: 'Not available from local fallback analysis.',
-      extractedFacts: {
-        documentType: docType,
-        subject: 'Not available in supplied text',
-        parties: [],
-        importantDates: [],
-        keyObligations: [],
-        importantClauses: [],
-      },
-      flaggedClauses: flagged,
-      missingProtections: [],
-      positiveAspects: [],
-      recommendedNextSteps: [],
-      officialSources: [],
-    };
-
+  const runLocalRuleAudit = (text: string) => {
+    const result = generateDocumentAnalysisFallback(text);
     setAnalysisResult(result);
     setAnalysisSource('local-rule-audit');
-    setAnalysisNotice('Server analysis was unavailable. Showing a limited local keyword fallback; unsupported facts and sources are not supplied.');
+    setAnalysisNotice('Gemini did not produce this result. The local keyword fallback scanned the complete supplied text for selected patterns only; legal effects and citations were not verified.');
   };
 
   const generateReportText = (): string => {
@@ -353,7 +257,7 @@ This Agreement is made on 10th February 2026 between Alpha Digital Ltd ("Disclos
 LEGAL BOT — INDIAN CONTRACT & DOCUMENT AUDIT REPORT
 Document: ${documentName || 'Document Audit'}
 Generated: ${new Date().toLocaleDateString('en-IN', { dateStyle: 'full' })}
-Risk Score: ${r.riskScore}/100 (${r.riskLevel} Risk)
+Risk Score: ${r.riskScore !== undefined ? `${r.riskScore}/100 (${r.riskLevel || 'Unrated'} Risk)` : 'Not assessed'}
 =====================================================
 
 1. DOCUMENT SUMMARY
@@ -379,11 +283,11 @@ ${r.extractedFacts?.keyObligations?.length ? r.extractedFacts.keyObligations.map
 -----------------------------------------------------
 3. FLAGGED LEGAL ISSUES & RISKS (${r.flaggedClauses?.length || 0})
 ${r.flaggedClauses?.map((c, idx) => `
-[Clause ${idx + 1}] ${c.clauseTitle} (Severity: ${c.severity})
+[Passage ${idx + 1}] ${c.clauseTitle}${c.severity ? ` (Severity: ${c.severity})` : ''}
+Evidence: ${c.evidenceSnippet}
 Issue: ${c.issue}
-Recommended Redline: ${c.recommendation}
-Relevant Law: ${c.relevantLaw || 'Not available'}
-`).join('\n') || 'No high-risk clauses flagged.'}
+Suggested next step: ${c.recommendation}
+`).join('\n') || 'No evidence-backed passage was retained; this does not establish that the document is safe.'}
 
 -----------------------------------------------------
 4. MISSING CLAUSES & SAFEGUARDS
@@ -593,7 +497,7 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                   {analysisSource === 'statutory-engine' && (
                     <p className="font-semibold">Statutory-engine response: this is a deterministic fallback, not a Gemini-generated analysis.</p>
                   )}
-                  {analysisNotice && <p>Analysis may be truncated or limited: {analysisNotice}</p>}
+                  {analysisNotice && <p>Analysis scope: {analysisNotice}</p>}
                 </div>
               )}
               {/* Top Banner: Composite Risk Score + Quick Actions */}
@@ -615,8 +519,10 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                     <div>
                       <div className="text-[11px] text-slate-400 font-medium">Composite Risk</div>
                       <div className="text-3xl font-extrabold text-slate-900 dark:text-white tabular-nums">
-                        {analysisResult.riskScore}
-                        <span className="text-xs font-normal text-slate-400"> / 100</span>
+                        {analysisResult.riskScore ?? 'Not assessed'}
+                        {analysisResult.riskScore !== undefined && (
+                          <span className="text-xs font-normal text-slate-400"> / 100</span>
+                        )}
                       </div>
                     </div>
                     <span
@@ -625,10 +531,12 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                           ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-200'
                           : analysisResult.riskLevel === 'Medium'
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200'
+                          : analysisResult.riskLevel === 'Low'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                       }`}
                     >
-                      {analysisResult.riskLevel} Risk
+                      {analysisResult.riskLevel ? `${analysisResult.riskLevel} Risk` : 'Not assessed'}
                     </span>
                   </div>
                 </div>
@@ -765,27 +673,27 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                 )}
               </div>
 
-              {/* SECTION 3: FLAGGED LEGAL ISSUES & RISKS (AI Interpretation) */}
+              {/* SECTION 3: EVIDENCE-LINKED REVIEW PASSAGES */}
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-2">
                     <ShieldAlert className="w-5 h-5 text-red-600 dark:text-red-400" />
                     <div>
                       <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                        Flagged Legal Issues & Risks ({analysisResult.flaggedClauses?.length || 0})
+                        Potential Passages for Review ({analysisResult.flaggedClauses?.length || 0})
                       </h3>
                       <p className="text-[11px] text-slate-400">
-                        AI Statutory Interpretation under Indian Law & Contract Jurisprudence
+                        Each item must include an exact excerpt; legal effects and citations are not verified.
                       </p>
                     </div>
                   </div>
                   <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-                    Legal Interpretation
+                    Evidence-linked review
                   </span>
                 </div>
 
                 <div className="space-y-3">
-                  {analysisResult.flaggedClauses?.map((clause, idx) => (
+                  {analysisResult.flaggedClauses?.length ? analysisResult.flaggedClauses.map((clause, idx) => (
                     <div
                       key={idx}
                       className="p-4 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-xs space-y-2"
@@ -793,16 +701,21 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                       <div className="flex items-center justify-between font-bold text-red-900 dark:text-red-200">
                         <span>{clause.clauseTitle}</span>
                         <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-red-200 dark:bg-red-900/60 text-red-800 dark:text-red-300 font-semibold">
-                          {clause.severity} Severity
+                          {clause.severity ? `${clause.severity} Severity` : 'Needs review'}
                         </span>
                       </div>
 
+                      <blockquote className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-red-100 dark:border-red-900/30 text-slate-800 dark:text-slate-200 leading-relaxed">
+                        <strong className="text-slate-700 dark:text-slate-300">Exact passage:</strong>{' '}
+                        “{clause.evidenceSnippet}”
+                      </blockquote>
+
                       <p className="text-red-900 dark:text-red-300 leading-relaxed">
-                        <strong>Potential Legal Issue:</strong> {clause.issue}
+                        <strong>Potential review point:</strong> {clause.issue}
                       </p>
 
                       <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-red-100 dark:border-red-900/30 text-slate-800 dark:text-slate-200 leading-relaxed">
-                        <strong className="text-blue-700 dark:text-blue-400">Recommended Redline / Action:</strong>{' '}
+                        <strong className="text-blue-700 dark:text-blue-400">Suggested next step:</strong>{' '}
                         {clause.recommendation}
                       </div>
 
@@ -813,7 +726,11 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                         </div>
                       )}
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      No evidence-backed passage was retained. This does not establish that the document is safe.
+                    </p>
+                  )}
                 </div>
               </div>
 

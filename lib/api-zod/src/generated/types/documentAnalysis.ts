@@ -19,8 +19,8 @@ export interface DocumentAnalysis {
      * @minimum 0
      * @maximum 100
      */
-  riskScore: number;
-  riskLevel: DocumentAnalysisRiskLevel;
+  riskScore?: number;
+  riskLevel?: DocumentAnalysisRiskLevel;
   governingLawCompliance?: string;
   extractedFacts: ExtractedFacts;
   flaggedClauses: FlaggedClause[];

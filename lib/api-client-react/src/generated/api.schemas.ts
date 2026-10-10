@@ -127,10 +127,12 @@ export const FlaggedClauseSeverity = {
 
 export interface FlaggedClause {
   clauseTitle: string;
-  severity: FlaggedClauseSeverity;
+  severity?: FlaggedClauseSeverity;
   issue: string;
   recommendation: string;
   relevantLaw?: string;
+  /** @maxLength 600 */
+  evidenceSnippet: string;
 }
 
 export interface OfficialSource {
@@ -158,8 +160,8 @@ export interface DocumentAnalysis {
      * @minimum 0
      * @maximum 100
      */
-  riskScore: number;
-  riskLevel: DocumentAnalysisRiskLevel;
+  riskScore?: number;
+  riskLevel?: DocumentAnalysisRiskLevel;
   governingLawCompliance?: string;
   extractedFacts: ExtractedFacts;
   flaggedClauses: FlaggedClause[];

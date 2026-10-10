@@ -9,8 +9,10 @@ import type { FlaggedClauseSeverity } from './flaggedClauseSeverity';
 
 export interface FlaggedClause {
   clauseTitle: string;
-  severity: FlaggedClauseSeverity;
+  severity?: FlaggedClauseSeverity;
   issue: string;
   recommendation: string;
   relevantLaw?: string;
+  /** @maxLength 600 */
+  evidenceSnippet: string;
 }
