@@ -123,6 +123,21 @@ Conclude with a brief standard disclaimer in the matched language stating that t
     const reply = response.text || 'Unable to generate response. Please consult statutory lookup.';
     res.json(SendLegalChatMessageResponse.parse({ reply, source: 'gemini-3.8-flash' }));
   } catch (error) {
+    const isGeminiUnavailable =
+      typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      error.status === 503;
+
+    if (isGeminiUnavailable) {
+      req.log.warn({ err: error }, 'Gemini temporarily unavailable; using statutory fallback');
+      res.status(503).json({
+        error: 'Gemini is temporarily unavailable. Falling back to statutory engine.',
+        fallback: true,
+      });
+      return;
+    }
+
     req.log.error({ err: error }, 'Error generating AI response');
     res.status(500).json({
       error: 'Failed to generate legal guidance from AI engine',
