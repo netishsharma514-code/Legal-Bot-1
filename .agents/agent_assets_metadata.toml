@@ -14,3 +14,17 @@ mtime_ms = 1791704504439
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:89e97b99-b58d-4040-9f82-3dc590146e11/326a55bf-2157-4f4e-832a-b4a6f0570723/6fab8f31-51ea-4434-9365-fa52c1ad874e"
 storage_version_token = "1791704514640738"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "l9FiSetAKMNH0miawGPz0"
+uri = "file://generated-artifacts/Legal-Bot-After-Verification-Backup.zip"
+type = "unspecified"
+title = "Legal Bot After Verification Backup"
+description = "Final verified ZIP backup of the existing Legal Bot workspace. The separate before-verification backup is preserved."
+logical_id = "c3ce86e1-64dc-41db-b1ad-e6d185111a3d"
+content_hash = "sha256:ea1c61fc634dc8a06234a66a21b26bf68473b48d978da2d75c0ace35ec7f9a04"
+size = 367522
+mtime_ms = 1791705225872
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:89e97b99-b58d-4040-9f82-3dc590146e11/c3ce86e1-64dc-41db-b1ad-e6d185111a3d/663eaa5e-5c9e-43f8-a8e9-b8331e6f8218"
+storage_version_token = "1791705241348263"
+content_type = "application/octet-stream"
