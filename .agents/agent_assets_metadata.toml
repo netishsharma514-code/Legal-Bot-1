@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "AjW8LBvDG6f0vdonpHBTQ"
+uri = "file://generated-artifacts/Legal-Bot-Before-Verification-Resume-Backup.zip"
+type = "unspecified"
+title = "Legal Bot Before Verification Resume Backup"
+description = "Verified ZIP backup of the current Legal Bot workspace. Download the archive from this card."
+logical_id = "326a55bf-2157-4f4e-832a-b4a6f0570723"
+content_hash = "sha256:ea1c61fc634dc8a06234a66a21b26bf68473b48d978da2d75c0ace35ec7f9a04"
+size = 367522
+mtime_ms = 1791704504439
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:89e97b99-b58d-4040-9f82-3dc590146e11/326a55bf-2157-4f4e-832a-b4a6f0570723/6fab8f31-51ea-4434-9365-fa52c1ad874e"
+storage_version_token = "1791704514640738"
+content_type = "application/octet-stream"
