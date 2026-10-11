@@ -1,0 +1,43 @@
+Continue working on my EXISTING Legal Bot project only.
+
+Perform the next safe testing phase for A (AI Chat) and B (Document Upload and Extraction).
+
+BACKUP SAFETY:
+- Preserve both existing backup ZIP files exactly as they are.
+- Do not delete, overwrite, rename, or modify either backup.
+- Do not create a replacement project.
+
+STRICT RULES:
+- Do not edit or modify source files.
+- Do not call Gemini or any external AI API.
+- Do not deploy or publish.
+- Do not reveal secrets or environment variable values.
+- Do not submit any real or sensitive legal documents.
+
+TASK A — AI CHAT, WITHOUT LIVE AI:
+1. Inspect existing chat validation and fallback tests.
+2. Test missing messages, empty messages, invalid request bodies, and message-length limits where supported.
+3. Use mocks or isolated tests to check the local fallback behavior.
+4. Do not claim Gemini is working because the fallback succeeds.
+
+TASK B — DOCUMENT UPLOAD AND EXTRACTION, WITHOUT AI:
+1. Inspect existing extraction tests and utilities.
+2. Test extraction using non-sensitive sample PDF, DOCX, and TXT files if suitable samples are already available.
+3. Test invalid file types, corrupt files, empty files, and oversized files using isolated tests or safe fixtures.
+4. Do not click Analyze or call /api/analyze-document if that would invoke Gemini.
+5. Report how scanned PDFs are handled and confirm that OCR is not available if still absent.
+
+TEST SAFETY:
+- Prefer existing tests and isolated test utilities.
+- Do not start duplicate servers or stop existing managed workflows.
+- Do not modify project files or dependencies.
+- If a test would require source changes, external calls, or risky actions, skip it and report why.
+
+At the end, report:
+- Tests executed and exact pass/fail counts.
+- Any skipped tests and reasons.
+- Whether any files changed.
+- Confirmation that both backups remain untouched.
+- The safest next step for live AI testing.
+
+Do not proceed to deployment or UI changes.
