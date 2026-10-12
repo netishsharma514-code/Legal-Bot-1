@@ -857,13 +857,29 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                 <div className="p-6 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 text-center space-y-3">
                   <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
                   <h4 className="font-bold text-emerald-900 dark:text-emerald-200">
-                    Consultation Inquiry Sent
+                    {dbMode === 'local' ? 'Saved in This Browser' : 'Inquiry Saved'}
                   </h4>
                   <p className="text-xs text-emerald-800 dark:text-emerald-300">
                     {dbMode === 'local'
                       ? <>Reference ID: <strong>{consultSuccessInquiry.id}</strong>. This inquiry is saved in this browser only and has not been delivered to the advocate.</>
-                      : <>Reference ID: <strong>{consultSuccessInquiry.id}</strong>. The advocate's chamber will contact you within 24 hours.</>}
+                      : <>Reference ID: <strong>{consultSuccessInquiry.id}</strong>. This website does not notify the advocate; use the directory contact details to arrange follow-up.</>}
                   </p>
+                  {dbMode !== 'local' && consultModalLawyer && (
+                    <div className="flex flex-wrap justify-center gap-4 text-xs font-semibold">
+                      <a
+                        href={`tel:${consultModalLawyer.phone.replace(/\s+/g, '')}`}
+                        className="text-emerald-800 underline underline-offset-2"
+                      >
+                        Call {consultModalLawyer.name}
+                      </a>
+                      <a
+                        href={`mailto:${consultModalLawyer.email}`}
+                        className="text-emerald-800 underline underline-offset-2"
+                      >
+                        Email chamber
+                      </a>
+                    </div>
+                  )}
                   <button
                     onClick={() => setConsultModalLawyer(null)}
                     className="py-2 px-5 rounded-lg bg-emerald-700 text-white text-xs font-semibold cursor-pointer"

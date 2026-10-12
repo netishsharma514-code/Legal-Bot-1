@@ -135,17 +135,17 @@ export function DocumentLawyerConsultModal({
 
     try {
       // Store in Supabase / Local storage database
-      await supabase.from('consultation_inquiries').insert({
+      const { error } = await supabase.from('consultation_inquiries').insert({
         ...inquiryRecord,
         mode: consultationMode,
         database_mode: dbMode,
       });
+      if (error) throw error;
 
       setSubmittedInquiry(inquiryRecord);
     } catch (err) {
-      console.warn('Inquiry save notice:', err);
-      // Fallback local acknowledgment
-      setSubmittedInquiry(inquiryRecord);
+      console.error('Error saving consultation inquiry:', err);
+      setSubmitError('We could not save your inquiry. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -211,7 +211,7 @@ export function DocumentLawyerConsultModal({
                 </div>
                 <div>
                   <span className="text-[11px] uppercase tracking-wider font-bold text-emerald-700 dark:text-emerald-400">
-                    Consultation Inquiry Transmitted
+                    {dbMode === 'local' ? 'Saved in This Browser' : 'Inquiry Saved'}
                   </span>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     Inquiry Reference: {submittedInquiry.id}
@@ -251,7 +251,7 @@ export function DocumentLawyerConsultModal({
                     Status: <strong className="text-emerald-700 dark:text-emerald-400">{submittedInquiry.status}</strong>
                   </span>
                   <span className="text-slate-400">
-                    Expected Advocate Response: Within 24 Hours
+                    {dbMode === 'local' ? 'Not delivered to the advocate' : 'No advocate notification is sent'}
                   </span>
                 </div>
               </div>
