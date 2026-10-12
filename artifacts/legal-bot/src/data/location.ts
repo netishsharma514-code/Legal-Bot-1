@@ -71,28 +71,16 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-export function findNearestIndianCity(lat: number, lng: number): CityLocation {
-  let minDistance = Infinity;
-  let nearestCity = INDIAN_CITIES[0];
-
-  for (const c of INDIAN_CITIES) {
-    const dist = calculateDistance(lat, lng, c.lat, c.lng);
-    if (dist < minDistance) {
-      minDistance = dist;
-      nearestCity = c;
-    }
-  }
-
-  return nearestCity;
-}
-
 export async function requestBrowserGeolocation(): Promise<{
   success: boolean;
   location?: UserLocationState;
   permissionDenied?: boolean;
   error?: string;
 }> {
-  if (typeof window === 'undefined' || !navigator.geolocation) {
+  if (
+    typeof window === 'undefined' ||
+    !navigator.geolocation
+  ) {
     return {
       success: false,
       error: 'Geolocation is not supported by your browser.',
@@ -101,35 +89,98 @@ export async function requestBrowserGeolocation(): Promise<{
 
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const matched = findNearestIndianCity(latitude, longitude);
-        const locState: UserLocationState = {
-          city: matched.city,
-          state: matched.state,
-          source: 'detected',
-          lat: latitude,
-          lng: longitude,
-        };
-        saveStoredLocation(locState);
-        resolve({
-          success: true,
-          location: locState,
-        });
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+
+          // Get the actual address using reverse geocoding
+          const url =
+            `https://nominatim.openstreetmap.org/reverse` +
+            `?format=jsonv2&lat=${latitude}` +
+            `&lon=${longitude}&zoom=18&addressdetails=1`;
+
+          const response = await fetch(url, {
+            headers: {
+              Accept: 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error('Address lookup failed.');
+          }
+
+          const data = await response.json();
+          const address = data.address ?? {};
+
+          const city =
+            address.village ||
+            address.hamlet ||
+            address.town ||
+            address.city ||
+            address.suburb ||
+            address.municipality ||
+            address.county ||
+            'Location found';
+
+          const state = address.state || '';
+          const district =
+            address.state_district ||
+            address.county ||
+            '';
+
+          const postalCode = address.postcode || '';
+
+          const locState: UserLocationState = {
+            city,
+            state,
+            source: 'detected',
+            lat: latitude,
+            lng: longitude,
+          };
+
+          // Save the detected location
+          saveStoredLocation(locState);
+
+          resolve({
+            success: true,
+            location: locState,
+          });
+        } catch (error) {
+          console.error('Reverse geocoding error:', error);
+
+          // Keep the GPS coordinates even if address lookup fails
+          const locState: UserLocationState = {
+            city: 'Current GPS location',
+            state: '',
+            source: 'detected',
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+
+          saveStoredLocation(locState);
+
+          resolve({
+            success: true,
+            location: locState,
+          });
+        }
       },
       (error) => {
-        const isDenied = error.code === error.PERMISSION_DENIED;
+        const isDenied =
+          error.code === error.PERMISSION_DENIED;
+
         resolve({
           success: false,
           permissionDenied: isDenied,
           error: isDenied
-            ? 'Location permission was denied. You can select your city manually from the list.'
-            : 'Unable to retrieve location. Please choose your city manually.',
+            ? 'Location permission was denied. Please allow location access in your browser.'
+            : 'Unable to retrieve GPS location. Please try again.',
         });
       },
       {
-        timeout: 10000,
-        maximumAge: 60000,
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
       }
     );
   });

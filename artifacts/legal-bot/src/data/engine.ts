@@ -2,7 +2,12 @@ import { SECTIONS } from './sections';
 import { ACTS } from './acts';
 import { CITIZEN_RIGHTS } from './rights';
 import { CONSTITUTION_ARTICLES } from './constitution';
-import { Section, Act, CitizenRight, ConstitutionArticle } from './types';
+import {
+  Section,
+  Act,
+  CitizenRight,
+  ConstitutionArticle,
+} from './types';
 
 export interface SearchResult {
   sections: Section[];
@@ -14,24 +19,49 @@ export interface SearchResult {
 
 export function searchLegalKnowledge(query: string): SearchResult {
   const normalized = query.toLowerCase().trim();
+
   if (!normalized) {
-    return { sections: [], acts: [], rights: [], constitutionArticles: [], matchedKeywords: [] };
+    return {
+      sections: [],
+      acts: [],
+      rights: [],
+      constitutionArticles: [],
+      matchedKeywords: [],
+    };
   }
 
-  const queryWords = normalized.split(/\s+/).filter(w => w.length > 2);
+  const queryWords = normalized
+    .split(/\s+/)
+    .map(word => word.replace(/[^\w]/g, ''))
+    .filter(word => word.length > 2);
 
   // Match Sections
   const matchedSections = SECTIONS.filter(s => {
-    // Direct match on section numbers
-    if (normalized.includes(s.number.toLowerCase()) || (s.ipcNumber && normalized.includes(s.ipcNumber.toLowerCase()))) {
+    const sectionNumber = s.number.toLowerCase();
+    const ipcNumber = s.ipcNumber?.toLowerCase();
+
+    if (
+      normalized.includes(sectionNumber) ||
+      (!!ipcNumber && normalized.includes(ipcNumber))
+    ) {
       return true;
     }
-    // Match in title or description
-    if (s.title.toLowerCase().includes(normalized) || s.description.toLowerCase().includes(normalized)) {
+
+    if (
+      s.title.toLowerCase().includes(normalized) ||
+      s.description.toLowerCase().includes(normalized)
+    ) {
       return true;
     }
-    // Match keywords
-    return s.keywords.some(k => normalized.includes(k.toLowerCase()) || queryWords.some(qw => k.toLowerCase().includes(qw)));
+
+    return s.keywords.some(keyword => {
+      const key = keyword.toLowerCase();
+
+      return (
+        normalized.includes(key) ||
+        queryWords.some(word => key.includes(word))
+      );
+    });
   });
 
   // Match Acts
@@ -39,27 +69,62 @@ export function searchLegalKnowledge(query: string): SearchResult {
     return (
       a.name.toLowerCase().includes(normalized) ||
       a.shortName.toLowerCase().includes(normalized) ||
-      a.keyTopics.some(t => normalized.includes(t.toLowerCase()) || queryWords.some(qw => t.toLowerCase().includes(qw)))
+      a.keyTopics.some(topic => {
+        const key = topic.toLowerCase();
+
+        return (
+          normalized.includes(key) ||
+          queryWords.some(word => key.includes(word))
+        );
+      })
     );
   });
 
-  // Match Rights
+  // Match Citizen Rights
   const matchedRights = CITIZEN_RIGHTS.filter(r => {
     return (
       r.title.toLowerCase().includes(normalized) ||
       r.category.toLowerCase().includes(normalized) ||
       r.description.toLowerCase().includes(normalized) ||
-      queryWords.some(qw => r.title.toLowerCase().includes(qw) || r.governingLaw.toLowerCase().includes(qw))
+      queryWords.some(
+        word =>
+          r.title.toLowerCase().includes(word) ||
+          r.governingLaw.toLowerCase().includes(word)
+      )
     );
   });
 
-  // Match Constitution
+  // Match Constitution Articles
+  const articleMatch = normalized.match(
+    /\barticle\s*(\d+[a-z]?)\b/i
+  );
+
+  const requestedArticle = articleMatch?.[1]?.toLowerCase();
+
   const matchedArticles = CONSTITUTION_ARTICLES.filter(c => {
+    const storedMatch = c.article
+      .toLowerCase()
+      .match(/\barticle\s*(\d+[a-z]?)\b/i);
+
+    const storedArticle = storedMatch?.[1]?.toLowerCase();
+
+    // Exact article-number match
+    if (
+      requestedArticle &&
+      storedArticle === requestedArticle
+    ) {
+      return true;
+    }
+
+    // Match article title and description
     return (
-      c.article.toLowerCase().includes(normalized) ||
       c.title.toLowerCase().includes(normalized) ||
       c.description.toLowerCase().includes(normalized) ||
-      queryWords.some(qw => c.title.toLowerCase().includes(qw))
+      queryWords.some(
+        word =>
+          c.title.toLowerCase().includes(word) ||
+          c.description.toLowerCase().includes(word)
+      )
     );
   });
 
