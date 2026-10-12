@@ -40,7 +40,6 @@ interface LawyersProps {
 }
 
 type FeeFilter = 'all' | 'free' | 'paid';
-type DirectoryViewMode = 'all' | 'ai-guidance' | 'gov-aid' | 'private-lawyers';
 type LanguageMode = 'en' | 'hi' | 'hinglish';
 
 export function Lawyers({ onNavigateTab }: LawyersProps) {
@@ -53,7 +52,6 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [eligibilityModalOpen, setEligibilityModalOpen] = useState(false);
   const [filterNearMeOnly, setFilterNearMeOnly] = useState(false);
-  const [activeViewMode, setActiveViewMode] = useState<DirectoryViewMode>('all');
   const [languageMode, setLanguageMode] = useState<LanguageMode>('en');
 
   // Consultation booking modal state
@@ -65,6 +63,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
   const [consultMode, setConsultMode] = useState<'chamber' | 'phone' | 'video'>('chamber');
   const [consultSuccessInquiry, setConsultSuccessInquiry] = useState<ConsultationInquiry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [consultError, setConsultError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleLocationChange = (e: Event) => {
@@ -134,6 +133,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
     }
 
     setIsSubmitting(true);
+    setConsultError(null);
     const inquiry: ConsultationInquiry = {
       id: `INQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       lawyerId: consultModalLawyer.id,
@@ -156,13 +156,15 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
     };
 
     try {
-      await supabase.from('consultation_inquiries').insert({
+      const { error } = await supabase.from('consultation_inquiries').insert({
         ...inquiry,
         database_mode: dbMode,
       });
+      if (error) throw error;
       setConsultSuccessInquiry(inquiry);
-    } catch {
-      setConsultSuccessInquiry(inquiry);
+    } catch (err) {
+      console.error('Error sending consultation inquiry:', err);
+      setConsultError('Your inquiry could not be sent. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -466,13 +468,14 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
           </div>
 
           <div className="pt-5 mt-4 border-t border-slate-100 dark:border-slate-800">
-            <a
-              href="#lawyers-list"
+            <button
+              type="button"
+              onClick={() => document.getElementById('lawyers-list')?.scrollIntoView({ behavior: 'smooth' })}
               className="w-full py-2.5 px-4 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer text-center"
             >
               <span>{strings.card3Btn}</span>
               <ChevronRight className="w-4 h-4" />
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -533,7 +536,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by advocate name, Bar Council ID (e.g. D/1842/2008), court, or specialty..."
+            aria-label="Search advocates by name, registration number, court, or specialty"
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600"
           />
         </div>
@@ -746,39 +749,51 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <a
-                    href={lawyer.isDemo ? '#demo-warning' : `tel:${lawyer.phone.replace(/\s+/g, '')}`}
-                    onClick={(e) => {
-                      if (lawyer.isDemo) {
-                        e.preventDefault();
-                        alert('This is a DEMO PROFILE for UI testing. Demo lawyers do not receive real phone calls or requests.');
-                      }
-                    }}
-                    className="py-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-blue-600" />
-                    <span>{lawyer.isDemo ? 'Demo Chamber' : 'Call Chamber'}</span>
-                  </a>
+                  {lawyer.isDemo ? (
+                    <span
+                      title="Demo profile — contact details are not available"
+                      className="py-2 px-3 rounded-lg border border-slate-200 text-slate-500 text-xs font-semibold flex items-center justify-center gap-1.5"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Demo profile</span>
+                    </span>
+                  ) : (
+                    <a
+                      href={`tel:${lawyer.phone.replace(/\s+/g, '')}`}
+                      className="py-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Call Chamber</span>
+                    </a>
+                  )}
 
                   <button
+                    type="button"
+                    disabled={lawyer.isDemo}
+                    title={lawyer.isDemo ? 'Demo profile — consultation is unavailable' : undefined}
                     onClick={() => {
-                      if (lawyer.isDemo) {
-                        alert('DEMO PROFILE: This profile is for UI layout testing only and cannot receive consultation requests or private documents.');
-                        return;
-                      }
                       setConsultModalLawyer(lawyer);
                       setConsultSuccessInquiry(null);
                     }}
                     className={`py-2 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer ${
                       lawyer.isDemo
-                        ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                        ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
                         : 'bg-blue-700 hover:bg-blue-800 text-white'
                     }`}
                   >
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>{lawyer.isDemo ? 'Demo Consult' : 'Consult'}</span>
+                    <span>{lawyer.isDemo ? 'Demo only' : 'Consult'}</span>
                   </button>
                 </div>
+                {!lawyer.isDemo && (
+                  <a
+                    href={`mailto:${lawyer.email}`}
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+                    Email Chamber
+                  </a>
+                )}
               </div>
             </div>
           );
@@ -845,7 +860,9 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                     Consultation Inquiry Sent
                   </h4>
                   <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                    Reference ID: <strong>{consultSuccessInquiry.id}</strong>. The advocate's chamber will contact you within 24 hours.
+                    {dbMode === 'local'
+                      ? <>Reference ID: <strong>{consultSuccessInquiry.id}</strong>. This inquiry is saved in this browser only and has not been delivered to the advocate.</>
+                      : <>Reference ID: <strong>{consultSuccessInquiry.id}</strong>. The advocate's chamber will contact you within 24 hours.</>}
                   </p>
                   <button
                     onClick={() => setConsultModalLawyer(null)}
@@ -856,6 +873,11 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                 </div>
               ) : (
                 <form onSubmit={handleSendConsultation} className="space-y-4 text-xs">
+                  {consultError && (
+                    <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">
+                      {consultError}
+                    </p>
+                  )}
                   <div>
                     <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                       Full Name *
@@ -865,7 +887,6 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                       required
                       value={consultName}
                       onChange={(e) => setConsultName(e.target.value)}
-                      placeholder="e.g. Rahul Sharma"
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                     />
                   </div>
@@ -880,7 +901,6 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                         required
                         value={consultPhone}
                         onChange={(e) => setConsultPhone(e.target.value)}
-                        placeholder="+91 98765 43210"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                       />
                     </div>
@@ -893,7 +913,6 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                         required
                         value={consultEmail}
                         onChange={(e) => setConsultEmail(e.target.value)}
-                        placeholder="rahul@example.com"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                       />
                     </div>
@@ -933,7 +952,6 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                       rows={2}
                       value={consultSubject}
                       onChange={(e) => setConsultSubject(e.target.value)}
-                      placeholder="e.g. Need consultation on residential lease termination and security deposit dispute."
                       className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                     />
                   </div>

@@ -26,12 +26,13 @@ import {
 
 interface AssistantProps {
   onNavigateTab?: (tab: string, filterSection?: string) => void;
+  initialQuery?: string;
 }
 
-export function Assistant({ onNavigateTab }: AssistantProps) {
+export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('default-session');
-  const [inputQuery, setInputQuery] = useState('');
+  const [inputQuery, setInputQuery] = useState(initialQuery);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [storageStatus, setStorageStatus] = useState<string>('Local');
@@ -521,7 +522,7 @@ export function Assistant({ onNavigateTab }: AssistantProps) {
               type="text"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
-              placeholder="Poochhein Hinglish, English ya Hindi me (e.g. 'Agar police FIR na likhe...', 'Cheque bounce timeline')..."
+              aria-label="Ask a legal question in English, Hindi, or Hinglish"
               disabled={isLoading}
               className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-slate-800"
             />

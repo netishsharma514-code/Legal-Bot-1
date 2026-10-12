@@ -63,7 +63,7 @@ export function Constitution() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search article, ruling, privacy, bail..."
+            aria-label="Search constitutional articles and precedents"
             className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
           />
         </div>

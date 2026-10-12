@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, dbMode } from '../lib/supabase';
 import { ShieldCheck, Check, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface JoinLawyerProps {
@@ -20,6 +20,7 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
   const [bio, setBio] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const stateBars = [
     'Bar Council of Delhi',
@@ -35,6 +36,7 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitError(null);
 
     try {
       const lawyerData = {
@@ -49,16 +51,17 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
         email,
         feeEstimate: fee,
         bio,
-        isVerified: true,
-        rating: 4.9,
-        reviewsCount: 1,
+        isVerified: false,
+        rating: 0,
+        reviewsCount: 0,
       };
 
-      await supabase.from('lawyers').insert(lawyerData);
+      const { error } = await supabase.from('lawyers').insert(lawyerData);
+      if (error) throw error;
       setSuccess(true);
     } catch (err) {
       console.error('Error registering lawyer:', err);
-      setSuccess(true);
+      setSubmitError('We could not submit your application. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -88,21 +91,30 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
         {success ? (
           <div className="p-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center space-y-3">
             <Check className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Registration Application Submitted!</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              {dbMode === 'local' ? 'Application saved on this device' : 'Application received for review'}
+            </h2>
             <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
-              Your profile with Bar Enrollment ID <strong>{barNumber}</strong> has been registered. You are now listed in the verified directory.
+              {dbMode === 'local'
+                ? 'This application is stored only in this browser and has not been sent to a directory for review.'
+                : <>Your application for Bar Enrollment ID <strong>{barNumber}</strong> has been received. Your profile will not appear as verified until its credentials are reviewed.</>}
             </p>
             <div className="pt-3">
               <button
                 onClick={() => onNavigateTab?.('lawyers')}
                 className="py-2.5 px-6 rounded-lg bg-blue-700 text-white text-xs font-semibold hover:bg-blue-800 transition-colors"
               >
-                View Advocate Directory
+                Return to Advocate Directory
               </button>
             </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {submitError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">
+                {submitError}
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -113,7 +125,6 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Adv. Vikramaditya Sen"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
@@ -127,7 +138,6 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                   required
                   value={barNumber}
                   onChange={(e) => setBarNumber(e.target.value)}
-                  placeholder="e.g. D/1842/2012"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
                 />
               </div>
@@ -160,7 +170,6 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                   required
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="e.g. New Delhi, Bengaluru"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
@@ -176,7 +185,6 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                   required
                   value={court}
                   onChange={(e) => setCourt(e.target.value)}
-                  placeholder="e.g. Delhi High Court & Patiala House Courts"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
@@ -206,7 +214,6 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                 required
                 value={specializations}
                 onChange={(e) => setSpecializations(e.target.value)}
-                placeholder="e.g. Criminal Defense, Anticipatory Bail, Cyber Crime, Section 138"
                 className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               />
             </div>
@@ -217,11 +224,10 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                   Contact Phone
                 </label>
                 <input
-                  type="text"
+                  type="tel"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98110 XXXXX"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
@@ -235,7 +241,6 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="chamber@bar.org"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
@@ -249,7 +254,6 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
                 rows={3}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Brief summary of notable litigation experience, landmark appearances, and practice philosophy..."
                 className="w-full p-2.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               />
             </div>

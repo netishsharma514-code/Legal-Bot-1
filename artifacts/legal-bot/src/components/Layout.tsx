@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { LegalBotAuthPanel } from './LegalBotAuthPanel';
 import { LocationSelectorModal } from './LocationSelectorModal';
+import { ErrorBoundary } from './error-boundary';
 import { supabase } from '../lib/supabase';
 import { getStoredLocation, UserLocationState } from '../data/location';
+import { VERIFIED_LEGAL_AID_CENTRES } from '../data/legalAid';
 import { 
   Scale, 
   Menu, 
@@ -67,11 +69,16 @@ export function Layout({ children, activeTab, onTabChange, onBack }: LayoutProps
     { id: 'rights', label: 'Citizen Rights' },
     { id: 'constitution', label: 'Constitution' },
   ];
+  const legalAidContact = VERIFIED_LEGAL_AID_CENTRES.find(
+    (centre) =>
+      centre.state.toLowerCase() === userLocation.state.toLowerCase() ||
+      centre.district.toLowerCase() === userLocation.city.toLowerCase(),
+  );
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased">
+    <div className="site-shell min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased">
       {/* 1. Universal Top Bar Contract: [Brand / Back] — [4-5 Nav Links] — [Location + Primary Action] */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
+      <header className="site-header sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 sm:gap-8">
           {/* Zone 1: Back Navigation + Brand Wordmark */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -88,6 +95,8 @@ export function Layout({ children, activeTab, onTabChange, onBack }: LayoutProps
             )}
 
             <button
+              type="button"
+              aria-label="Legal Bot home"
               onClick={() => { onTabChange('home'); setMobileMenuOpen(false); }}
               className="flex items-center gap-2.5 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-600 rounded-md py-1"
             >
@@ -156,21 +165,21 @@ export function Layout({ children, activeTab, onTabChange, onBack }: LayoutProps
       </header>
 
       {/* Operational Utility Ribbon (Emergency Helplines) */}
-      <aside aria-label="National Emergency Helplines" className="bg-slate-900 text-slate-300 text-xs border-b border-slate-800 py-2 px-4">
+      <aside aria-label="National Emergency Helplines" className="site-helplines bg-slate-900 text-slate-300 text-xs border-b border-slate-800 py-2 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <PhoneCall className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span className="font-semibold text-white tracking-wide">National 24x7 Helplines:</span>
             <div className="flex items-center gap-2 flex-wrap text-slate-300">
-              <span>Emergency <strong>112</strong></span>
+              <a href="tel:112" className="hover:text-white">Emergency <strong>112</strong></a>
               <span aria-hidden="true">·</span>
-              <span>Cyber Fraud <strong>1930</strong></span>
+              <a href="tel:1930" className="hover:text-white">Cyber Fraud <strong>1930</strong></a>
               <span aria-hidden="true">·</span>
-              <span>Women Helpline <strong>1090</strong></span>
+              <a href="tel:1090" className="hover:text-white">Women Helpline <strong>1090</strong></a>
               <span aria-hidden="true">·</span>
-              <span>Childline <strong>1098</strong></span>
+              <a href="tel:1098" className="hover:text-white">Childline <strong>1098</strong></a>
               <span aria-hidden="true">·</span>
-              <span>NALSA Legal Aid <strong>15100</strong></span>
+              <a href="tel:15100" className="hover:text-white">NALSA Legal Aid <strong>15100</strong></a>
             </div>
           </div>
           <button
@@ -234,8 +243,10 @@ export function Layout({ children, activeTab, onTabChange, onBack }: LayoutProps
       )}
 
       {/* Main Page Body */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {children}
+      <main className="site-main flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <ErrorBoundary resetKey={activeTab}>
+          {children}
+        </ErrorBoundary>
       </main>
 
       {/* Institutional Legal Footer */}
@@ -286,31 +297,31 @@ export function Layout({ children, activeTab, onTabChange, onBack }: LayoutProps
               </h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="https://www.indiacode.nic.in" target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+                  <a href="https://www.indiacode.nic.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
                     <span>India Code (Statutes)</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </li>
                 <li>
-                  <a href="https://main.sci.gov.in" target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+                  <a href="https://www.sci.gov.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
                     <span>Supreme Court of India</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </li>
                 <li>
-                  <a href="https://ecourts.gov.in" target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+                  <a href="https://ecourts.gov.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
                     <span>eCourts Services Portal</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </li>
                 <li>
-                  <a href="https://cybercrime.gov.in" target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+                  <a href="https://cybercrime.gov.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
                     <span>National Cyber Crime Portal</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </li>
                 <li>
-                  <a href="https://nalsa.gov.in" target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+                  <a href="https://nalsa.gov.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
                     <span>NALSA Legal Services</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
@@ -320,15 +331,21 @@ export function Layout({ children, activeTab, onTabChange, onBack }: LayoutProps
           </div>
 
           <div className="pt-6 border-t border-slate-200 dark:border-slate-800 text-center sm:flex sm:justify-between sm:text-left text-slate-500 dark:text-slate-400 space-y-2 sm:space-y-0">
-            <div>
-              © 2026 Legal Bot (Nyaya Sahayak). All rights reserved.
-            </div>
+            <div>© {new Date().getFullYear()} Legal Bot (Nyaya Sahayak). All rights reserved.</div>
             <div className="flex items-center justify-center gap-4">
               <button onClick={() => onTabChange('disclaimer')} className="hover:underline">Legal Disclaimer</button>
               <button onClick={() => onTabChange('about')} className="hover:underline">About Project</button>
               <button onClick={() => onTabChange('emergency')} className="hover:underline">Emergency Helpline 112</button>
             </div>
           </div>
+          {legalAidContact && (
+            <div className="mt-3 text-center sm:text-left">
+              Legal aid contact:{' '}
+              <a className="hover:underline" href={`mailto:${legalAidContact.email}`}>
+                {legalAidContact.email}
+              </a>
+            </div>
+          )}
         </div>
       </footer>
 

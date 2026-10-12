@@ -182,7 +182,6 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Ramesh Chandra"
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                   />
                 </div>
@@ -199,7 +198,6 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                   />
                 </div>
@@ -216,7 +214,6 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                   />
                 </div>
@@ -258,7 +255,6 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
                         required
                         value={barNumber}
                         onChange={(e) => setBarNumber(e.target.value)}
-                        placeholder="Bar Council ID (e.g. D/1842/2014)"
                         className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                       />
                     </div>

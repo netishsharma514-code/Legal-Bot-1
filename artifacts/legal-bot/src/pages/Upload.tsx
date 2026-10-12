@@ -429,7 +429,7 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                 value={documentText}
                 onChange={(e) => setDocumentText(e.target.value)}
                 disabled={!documentConsent}
-                placeholder="Paste contract clauses, employment agreement, rental deed, NDA, or loan terms here..."
+                aria-label="Document text to analyze"
                 className="w-full p-3 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600 leading-relaxed"
               />
             </div>

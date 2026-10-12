@@ -17,6 +17,28 @@ import { Procedure } from './pages/Procedure';
 import { Evidence } from './pages/Evidence';
 import { About } from './pages/About';
 import { Disclaimer } from './pages/Disclaimer';
+import { NotFound } from './pages/NotFound';
+
+const validTabs = new Set([
+  'home',
+  'assistant',
+  'acts',
+  'upload',
+  'lawyers',
+  'join-lawyer',
+  'documents',
+  'constitution',
+  'precedents',
+  'rights',
+  'emergency',
+  'cyber',
+  'legal-aid',
+  'deadlines',
+  'procedure',
+  'evidence',
+  'about',
+  'disclaimer',
+]);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -28,6 +50,7 @@ export default function App() {
   });
   const [historyStack, setHistoryStack] = useState<string[]>(['home']);
   const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>();
+  const [assistantQuery, setAssistantQuery] = useState('');
 
   // Synchronize browser native Back and Forward buttons
   useEffect(() => {
@@ -50,6 +73,9 @@ export default function App() {
   }, []);
 
   const handleNavigate = (tab: string, sectionId?: string) => {
+    if (tab === 'assistant') {
+      setAssistantQuery('');
+    }
     if (tab !== activeTab) {
       setHistoryStack((prev) => [...prev, tab]);
       window.history.pushState({ tab, sectionId }, '', `#${tab}`);
@@ -59,6 +85,11 @@ export default function App() {
       setSelectedSectionId(sectionId);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAskQuestion = (query: string) => {
+    handleNavigate('assistant');
+    setAssistantQuery(query);
   };
 
   const handleBack = () => {
@@ -80,11 +111,15 @@ export default function App() {
   };
 
   const renderContent = () => {
+    if (!validTabs.has(activeTab)) {
+      return <NotFound onNavigateTab={handleNavigate} />;
+    }
+
     switch (activeTab) {
       case 'home':
-        return <Home onNavigateTab={handleNavigate} />;
+        return <Home onNavigateTab={handleNavigate} onAskQuestion={handleAskQuestion} />;
       case 'assistant':
-        return <Assistant onNavigateTab={handleNavigate} />;
+        return <Assistant onNavigateTab={handleNavigate} initialQuery={assistantQuery} />;
       case 'acts':
         return <Acts initialSectionId={selectedSectionId} />;
       case 'upload':
@@ -117,7 +152,7 @@ export default function App() {
       case 'disclaimer':
         return <Disclaimer />;
       default:
-        return <Home onNavigateTab={handleNavigate} />;
+        return <NotFound onNavigateTab={handleNavigate} />;
     }
   };
 

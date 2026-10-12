@@ -371,7 +371,6 @@ export function DocumentLawyerConsultModal({
                       required
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
-                      placeholder="e.g. Rahul Sharma"
                       className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
@@ -386,7 +385,6 @@ export function DocumentLawyerConsultModal({
                       required
                       value={userPhone}
                       onChange={(e) => setUserPhone(e.target.value)}
-                      placeholder="e.g. +91 98765 43210"
                       className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
@@ -401,7 +399,6 @@ export function DocumentLawyerConsultModal({
                       required
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
-                      placeholder="e.g. rahul@example.com"
                       className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
@@ -442,7 +439,6 @@ export function DocumentLawyerConsultModal({
                     rows={2}
                     value={userNote}
                     onChange={(e) => setUserNote(e.target.value)}
-                    placeholder="e.g. Landlord is demanding 6 months deposit. Need advice on drafting an amendment before signing next Monday."
                     className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                   />
                 </div>

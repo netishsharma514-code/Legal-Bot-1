@@ -260,7 +260,7 @@ export function LocationSelectorModal({
                   type="text"
                   value={customCity}
                   onChange={(e) => setCustomCity(e.target.value)}
-                  placeholder="e.g. Gurugram, Noida, Indore, Bhopal..."
+                  aria-label="Search for a city"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                 />
               </div>

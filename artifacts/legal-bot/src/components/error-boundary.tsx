@@ -37,30 +37,35 @@ function toError(value: unknown): Error {
 
 function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
-      <div className="max-w-lg w-full text-center">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Something went wrong
-        </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          This part of the app hit an error. The rest of the app is still
-          running.
-        </p>
+    <section className="error-page" role="alert" aria-labelledby="app-error-title">
+      <div className="error-page-mark" aria-hidden="true">
+        <span>!</span>
+      </div>
+      <p className="error-page-kicker">UNEXPECTED ERROR</p>
+      <h1 id="app-error-title">We couldn’t load this page.</h1>
+      <p className="error-page-copy">
+        The rest of Legal Bot is still available. Try loading this page again,
+        or return to the homepage.
+      </p>
+      <div className="error-page-actions">
+        <button type="button" className="error-page-primary" onClick={resetError}>
+          Try again
+        </button>
+        <button
+          type="button"
+          className="error-page-secondary"
+          onClick={() => window.location.assign(`${window.location.pathname}#home`)}
+        >
+          Return to home
+        </button>
+      </div>
         {/* Dev only: messages can carry API responses and other internals. */}
         {import.meta.env.DEV ? (
-          <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-3 text-left text-xs text-gray-800">
+          <pre className="error-page-debug">
             {error.message || String(error)}
           </pre>
         ) : null}
-        <button
-          type="button"
-          onClick={resetError}
-          className="mt-4 rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700"
-        >
-          Try again
-        </button>
-      </div>
-    </div>
+    </section>
   );
 }
 
