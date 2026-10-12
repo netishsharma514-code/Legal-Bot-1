@@ -10,6 +10,6 @@ export type LegalChatReplySource = typeof LegalChatReplySource[keyof typeof Lega
 
 
 export const LegalChatReplySource = {
-  'gemini-38-flash': 'gemini-3.8-flash',
+  'gemini-25-flash': 'gemini-2.5-flash',
   'statutory-engine': 'statutory-engine',
 } as const;

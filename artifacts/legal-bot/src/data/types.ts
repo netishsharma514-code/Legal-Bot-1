@@ -147,7 +147,7 @@ export interface ChatMessage {
   timestamp: string;
   sectionsReferenced?: Section[];
   quickActions?: string[];
-  source?: 'gemini-3.8-flash' | 'statutory-engine';
+  source?: 'gemini-2.5-flash' | 'statutory-engine';
   structured?: StructuredLegalAnswer;
 }
 
@@ -246,4 +246,3 @@ export interface UserProfile {
   barCouncilNumber?: string;
   createdAt: string;
 }
-

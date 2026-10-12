@@ -49,7 +49,7 @@ export const SendLegalChatMessageBody = zod.object({
 
 export const SendLegalChatMessageResponse = zod.object({
   "reply": zod.string(),
-  "source": zod.enum(['gemini-3.8-flash', 'statutory-engine'])
+  "source": zod.enum(['gemini-2.5-flash', 'statutory-engine'])
 })
 
 
@@ -145,8 +145,123 @@ export const AnalyzeLegalDocumentResponse = zod.object({
   "relevance": zod.string()
 }))
 }),
-  "source": zod.enum(['gemini-3.8-flash', 'statutory-engine']),
+  "source": zod.enum(['gemini-2.5-flash', 'statutory-engine']),
   "notice": zod.string().optional()
+})
+
+
+/**
+ * @summary Store a consented consultation inquiry
+ */
+export const submitConsultationInquiryBodyInquiryIdMax = 80;
+
+export const submitConsultationInquiryBodyInquiryLawyerIdMax = 120;
+
+export const submitConsultationInquiryBodyInquiryLawyerNameMax = 200;
+
+export const submitConsultationInquiryBodyInquiryLawyerBarCouncilMax = 120;
+
+export const submitConsultationInquiryBodyInquiryLawyerCourtMax = 200;
+
+export const submitConsultationInquiryBodyInquiryLawyerCityMax = 120;
+
+export const submitConsultationInquiryBodyInquiryDocumentNameMax = 255;
+
+export const submitConsultationInquiryBodyInquiryDocumentTypeMax = 120;
+
+export const submitConsultationInquiryBodyInquiryDocumentSummaryMax = 6000;
+
+export const submitConsultationInquiryBodyInquiryExtractedIssuesItemMax = 1000;
+
+export const submitConsultationInquiryBodyInquiryExtractedIssuesMax = 30;
+
+export const submitConsultationInquiryBodyInquiryUserNameMax = 200;
+
+export const submitConsultationInquiryBodyInquiryUserPhoneMax = 40;
+
+export const submitConsultationInquiryBodyInquiryUserEmailMax = 254;
+
+export const submitConsultationInquiryBodyInquiryUserLocationMax = 160;
+
+export const submitConsultationInquiryBodyInquiryUserNoteMax = 4000;
+
+
+
+export const SubmitConsultationInquiryBody = zod.object({
+  "inquiry": zod.object({
+  "id": zod.string().min(1).max(submitConsultationInquiryBodyInquiryIdMax),
+  "lawyerId": zod.string().min(1).max(submitConsultationInquiryBodyInquiryLawyerIdMax),
+  "lawyerName": zod.string().min(1).max(submitConsultationInquiryBodyInquiryLawyerNameMax),
+  "lawyerBarCouncil": zod.string().min(1).max(submitConsultationInquiryBodyInquiryLawyerBarCouncilMax),
+  "lawyerCourt": zod.string().min(1).max(submitConsultationInquiryBodyInquiryLawyerCourtMax),
+  "lawyerCity": zod.string().min(1).max(submitConsultationInquiryBodyInquiryLawyerCityMax),
+  "documentName": zod.string().min(1).max(submitConsultationInquiryBodyInquiryDocumentNameMax),
+  "documentType": zod.string().min(1).max(submitConsultationInquiryBodyInquiryDocumentTypeMax),
+  "documentSummary": zod.string().max(submitConsultationInquiryBodyInquiryDocumentSummaryMax),
+  "extractedIssues": zod.array(zod.string().min(1).max(submitConsultationInquiryBodyInquiryExtractedIssuesItemMax)).max(submitConsultationInquiryBodyInquiryExtractedIssuesMax),
+  "userName": zod.string().min(1).max(submitConsultationInquiryBodyInquiryUserNameMax),
+  "userPhone": zod.string().min(1).max(submitConsultationInquiryBodyInquiryUserPhoneMax),
+  "userEmail": zod.string().email().max(submitConsultationInquiryBodyInquiryUserEmailMax),
+  "userLocation": zod.string().min(1).max(submitConsultationInquiryBodyInquiryUserLocationMax),
+  "userNote": zod.string().max(submitConsultationInquiryBodyInquiryUserNoteMax).optional(),
+  "consentGiven": zod.literal(true),
+  "status": zod.enum(['Pending Advocate Review']),
+  "createdAt": zod.coerce.date()
+}),
+  "mode": zod.enum(['chamber', 'phone', 'video']).optional()
+})
+
+export const SubmitConsultationInquiryResponse = zod.object({
+  "success": zod.literal(true)
+})
+
+
+/**
+ * @summary Store an advocate application for manual review
+ */
+export const submitLawyerApplicationBodyNameMax = 200;
+
+export const submitLawyerApplicationBodyBarCouncilNumberMax = 120;
+
+export const submitLawyerApplicationBodyStateMax = 120;
+
+export const submitLawyerApplicationBodyCityMax = 120;
+
+export const submitLawyerApplicationBodyCourtMax = 200;
+
+export const submitLawyerApplicationBodyExperienceYearsMin = 0;
+export const submitLawyerApplicationBodyExperienceYearsMax = 70;
+
+export const submitLawyerApplicationBodySpecializationsItemMax = 100;
+
+export const submitLawyerApplicationBodySpecializationsMax = 15;
+
+export const submitLawyerApplicationBodyPhoneMax = 40;
+
+export const submitLawyerApplicationBodyEmailMax = 254;
+
+export const submitLawyerApplicationBodyFeeEstimateMax = 200;
+
+export const submitLawyerApplicationBodyBioMax = 4000;
+
+
+
+export const SubmitLawyerApplicationBody = zod.object({
+  "name": zod.string().min(1).max(submitLawyerApplicationBodyNameMax),
+  "barCouncilNumber": zod.string().min(1).max(submitLawyerApplicationBodyBarCouncilNumberMax),
+  "state": zod.string().min(1).max(submitLawyerApplicationBodyStateMax),
+  "city": zod.string().min(1).max(submitLawyerApplicationBodyCityMax),
+  "court": zod.string().min(1).max(submitLawyerApplicationBodyCourtMax),
+  "experienceYears": zod.number().int().min(submitLawyerApplicationBodyExperienceYearsMin).max(submitLawyerApplicationBodyExperienceYearsMax),
+  "specializations": zod.array(zod.string().min(1).max(submitLawyerApplicationBodySpecializationsItemMax)).min(1).max(submitLawyerApplicationBodySpecializationsMax),
+  "phone": zod.string().min(1).max(submitLawyerApplicationBodyPhoneMax),
+  "email": zod.string().email().max(submitLawyerApplicationBodyEmailMax),
+  "feeEstimate": zod.string().max(submitLawyerApplicationBodyFeeEstimateMax),
+  "bio": zod.string().max(submitLawyerApplicationBodyBioMax)
+})
+
+export const SubmitLawyerApplicationResponse = zod.object({
+  "success": zod.literal(true)
 })
 
 

@@ -3,7 +3,7 @@ import { searchLegalKnowledge } from '../data/engine';
 import { generateStatutoryAnswer } from '../data/answerGenerator';
 import { ChatMessage, ChatSession, Section } from '../data/types';
 import { StructuredAnswerCard } from '../components/StructuredAnswerCard';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useSendLegalChatMessage } from '@workspace/api-client-react';
 import { 
   Send, 
@@ -35,7 +35,7 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
   const [inputQuery, setInputQuery] = useState(initialQuery);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [storageStatus, setStorageStatus] = useState<string>('Local');
+  const [storageStatus, setStorageStatus] = useState<string>('Checking');
   const sendLegalChatMessage = useSendLegalChatMessage();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -43,13 +43,38 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
   // Initialize or load sessions
   useEffect(() => {
     loadSessions();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      window.setTimeout(() => void loadSessions(), 0);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadSessions = async () => {
     try {
-      const { data } = await supabase.from('conversations').select('*');
+      let data: Record<string, any>[] | null = null;
+      if (isSupabaseConfigured) {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (authData.user) {
+          const { data: cloudData, error } = await supabase
+            .from('conversations')
+            .select('*')
+            .eq('user_id', authData.user.id)
+            .order('updated_at', { ascending: false });
+          if (error) throw error;
+          data = cloudData as Record<string, any>[];
+          setStorageStatus('Synced');
+        } else {
+          setStorageStatus('Sign in to sync');
+        }
+      } else {
+        const { data: localData, error } = await supabase.from('conversations').select('*');
+        if (error) throw error;
+        data = localData as Record<string, any>[];
+        setStorageStatus('Local');
+      }
+
       if (data && data.length > 0) {
-        setStorageStatus('Synced');
         const sessionMap = new Map<string, ChatSession>();
         data.forEach((d: any) => {
           const sid = d.id || ('session-' + Math.random().toString(36).substring(2, 9));
@@ -89,9 +114,34 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
         setSessions([defaultSession]);
         setActiveSessionId(defaultSession.id);
       }
-    } catch {
-      // Local fallback handled gracefully
+    } catch (error) {
+      console.error('Could not load consultation history:', error);
+      setStorageStatus('History unavailable');
     }
+  };
+
+  const persistSession = async (session: ChatSession) => {
+    let userId: string | undefined;
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      if (!data.user) {
+        setStorageStatus('Sign in to sync');
+        return;
+      }
+      userId = data.user.id;
+    }
+
+    const record = {
+      id: session.id,
+      title: session.title,
+      updated_at: session.updatedAt,
+      messages: session.messages,
+      ...(userId ? { user_id: userId } : {}),
+    };
+    const { error } = await (supabase.from('conversations') as any).upsert(record);
+    if (error) throw error;
+    setStorageStatus(isSupabaseConfigured ? 'Synced' : 'Local');
   };
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
@@ -127,14 +177,10 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
     setActiveSessionId(newSession.id);
 
     try {
-      await supabase.from('conversations').insert({
-        id: newSession.id,
-        title: newSession.title,
-        created_at: newSession.createdAt,
-        messages: newSession.messages,
-      });
-    } catch {
-      // Handled in dual-mode
+      await persistSession(newSession);
+    } catch (error) {
+      console.error('Could not save the consultation session:', error);
+      setStorageStatus('Save unavailable');
     }
   };
 
@@ -151,9 +197,26 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
     }
 
     try {
-      await supabase.from('conversations').delete().eq('id', sessionId);
-    } catch {
-      // Local DB
+      if (isSupabaseConfigured) {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (!data.user) {
+          setStorageStatus('Sign in to sync');
+          return;
+        }
+        const { error: deleteError } = await supabase
+          .from('conversations')
+          .delete()
+          .eq('user_id', data.user.id)
+          .eq('id', sessionId);
+        if (deleteError) throw deleteError;
+      } else {
+        const { error } = await supabase.from('conversations').delete().eq('id', sessionId);
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Could not delete the consultation session:', error);
+      setStorageStatus('Save unavailable');
     }
   };
 
@@ -196,7 +259,7 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
     try {
       // 2. Hybrid enhancement: Call Gemini API proxy on server
       let replyText = '';
-      let replySource: 'gemini-3.8-flash' | 'statutory-engine' = 'statutory-engine';
+      let replySource: 'gemini-2.5-flash' | 'statutory-engine' = 'statutory-engine';
 
       try {
         const response = await sendLegalChatMessage.mutateAsync({
@@ -241,15 +304,16 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
 
       setSessions(finalSessions);
 
-      // Persist session to Supabase / local storage (upsert prevents duplicate records)
-      await (supabase.from('conversations') as any).upsert({
+      await persistSession({
         id: activeSessionId,
         title: sessionTitle,
-        updated_at: new Date().toISOString(),
+        createdAt: activeSession?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         messages: finalMessages,
       });
     } catch (err) {
       console.error('Error during message exchange:', err);
+      setStorageStatus('Save unavailable');
     } finally {
       setIsLoading(false);
     }
@@ -393,7 +457,7 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
                     <div className="flex items-center gap-2">
                       {msg.source && (
                         <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
-                          {msg.source === 'gemini-3.8-flash' ? 'Gemini 3.8 Flash' : 'Statutory Engine'}
+                          {msg.source === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : 'Statutory Engine'}
                         </span>
                       )}
                       {msg.source === 'statutory-engine' && !isUser && (

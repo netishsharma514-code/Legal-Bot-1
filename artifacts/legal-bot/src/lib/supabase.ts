@@ -190,66 +190,20 @@ class LocalStorageDatabase {
   }
 
   auth = {
-    getUser: async () => {
-      const stored = localStorage.getItem('legalbot_auth_user');
-      if (stored) {
-        try {
-          return { data: { user: JSON.parse(stored) }, error: null };
-        } catch {
-          return { data: { user: null }, error: null };
-        }
-      }
-      return { data: { user: null }, error: null };
-    },
-    getSession: async () => {
-      const stored = localStorage.getItem('legalbot_auth_user');
-      if (stored) {
-        try {
-          const user = JSON.parse(stored);
-          return { data: { session: { user, access_token: 'local_token' } }, error: null };
-        } catch {
-          return { data: { session: null }, error: null };
-        }
-      }
-      return { data: { session: null }, error: null };
-    },
-    signInWithPassword: async ({ email }: { email: string; password?: string }) => {
-      const user = {
-        id: 'local-user-' + Math.random().toString(36).substring(2, 9),
-        email,
-        user_metadata: { full_name: email.split('@')[0], role: 'citizen' },
-      };
-      localStorage.setItem('legalbot_auth_user', JSON.stringify(user));
-      return { data: { user, session: { user, access_token: 'local_token' } }, error: null };
-    },
-    signUp: async ({ email, options }: { email: string; password?: string; options?: { data?: Record<string, unknown> } }) => {
-      const user = {
-        id: 'local-user-' + Math.random().toString(36).substring(2, 9),
-        email,
-        user_metadata: options?.data || { full_name: email.split('@')[0], role: 'citizen' },
-      };
-      localStorage.setItem('legalbot_auth_user', JSON.stringify(user));
-      return { data: { user, session: { user, access_token: 'local_token' } }, error: null };
-    },
-    signOut: async () => {
-      localStorage.removeItem('legalbot_auth_user');
-      return { error: null };
-    },
-    onAuthStateChange: (callback: (event: string, session: { user: unknown } | null) => void) => {
-      const listener = () => {
-        const stored = localStorage.getItem('legalbot_auth_user');
-        const user = stored ? JSON.parse(stored) : null;
-        callback(user ? 'SIGNED_IN' : 'SIGNED_OUT', user ? { user } : null);
-      };
-      window.addEventListener('storage', listener);
-      return {
-        data: {
-          subscription: {
-            unsubscribe: () => window.removeEventListener('storage', listener),
-          },
-        },
-      };
-    },
+    getUser: async () => ({ data: { user: null }, error: null }),
+    getSession: async () => ({ data: { session: null }, error: null }),
+    signInWithPassword: async () => ({
+      data: { user: null, session: null },
+      error: new Error('Configure Supabase to enable online accounts.'),
+    }),
+    signUp: async () => ({
+      data: { user: null, session: null },
+      error: new Error('Configure Supabase to enable online accounts.'),
+    }),
+    signOut: async () => ({ error: null }),
+    onAuthStateChange: () => ({
+      data: { subscription: { unsubscribe: () => undefined } },
+    }),
   };
 }
 

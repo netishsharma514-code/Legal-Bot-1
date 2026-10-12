@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase, dbMode } from '../lib/supabase';
+import { submitPublicRequest } from '../lib/api';
 import { ShieldCheck, Check, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface JoinLawyerProps {
@@ -51,13 +51,9 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
         email,
         feeEstimate: fee,
         bio,
-        isVerified: false,
-        rating: 0,
-        reviewsCount: 0,
       };
 
-      const { error } = await supabase.from('lawyers').insert(lawyerData);
-      if (error) throw error;
+      await submitPublicRequest('lawyer-applications', lawyerData);
       setSuccess(true);
     } catch (err) {
       console.error('Error registering lawyer:', err);
@@ -92,12 +88,10 @@ export function JoinLawyer({ onNavigateTab }: JoinLawyerProps) {
           <div className="p-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center space-y-3">
             <Check className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              {dbMode === 'local' ? 'Application saved on this device' : 'Application received for review'}
+              Application received for review
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
-              {dbMode === 'local'
-                ? 'This application is stored only in this browser and has not been sent to a directory for review.'
-                : <>Your application for Bar Enrollment ID <strong>{barNumber}</strong> has been received. Your profile will not appear as verified until its credentials are reviewed.</>}
+              <>Your application for Bar Enrollment ID <strong>{barNumber}</strong> has been received. Your profile will not appear as verified until its credentials are reviewed.</>
             </p>
             <div className="pt-3">
               <button

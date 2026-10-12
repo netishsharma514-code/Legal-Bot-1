@@ -10,6 +10,6 @@ export type DocumentAnalysisEnvelopeSource = typeof DocumentAnalysisEnvelopeSour
 
 
 export const DocumentAnalysisEnvelopeSource = {
-  'gemini-38-flash': 'gemini-3.8-flash',
+  'gemini-25-flash': 'gemini-2.5-flash',
   'statutory-engine': 'statutory-engine',
 } as const;

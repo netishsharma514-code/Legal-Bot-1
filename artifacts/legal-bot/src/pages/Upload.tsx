@@ -30,11 +30,14 @@ import {
 import { getStoredLocation, UserLocationState } from '../data/location';
 import { DocumentLawyerConsultModal } from '../components/DocumentLawyerConsultModal';
 import { LocationSelectorModal } from '../components/LocationSelectorModal';
+import { INITIAL_LAWYERS } from '../data/lawyers';
 import {
   useAnalyzeLegalDocument,
   useExtractLegalDocumentText,
 } from '@workspace/api-client-react';
 import { generateDocumentAnalysisFallback } from '@workspace/api-zod';
+
+const hasVerifiedLawyers = INITIAL_LAWYERS.some((lawyer) => lawyer.isVerified && !lawyer.isDemo);
 
 interface UploadProps {
   onNavigateTab?: (tab: string) => void;
@@ -52,7 +55,7 @@ export function Upload({ onNavigateTab }: UploadProps) {
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocationState>(getStoredLocation());
   const [documentConsent, setDocumentConsent] = useState(false);
-  const [analysisSource, setAnalysisSource] = useState<'gemini-3.8-flash' | 'statutory-engine' | 'local-rule-audit' | null>(null);
+  const [analysisSource, setAnalysisSource] = useState<'gemini-2.5-flash' | 'statutory-engine' | 'local-rule-audit' | null>(null);
   const [analysisNotice, setAnalysisNotice] = useState<string | null>(null);
   const extractDocumentText = useExtractLegalDocumentText();
   const analyzeDocument = useAnalyzeLegalDocument();
@@ -563,10 +566,12 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                   {/* Connect to Nearby Lawyer CTA */}
                   <button
                     onClick={() => setConsultModalOpen(true)}
-                    className="py-2 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold transition-colors flex items-center gap-2 shadow-xs cursor-pointer ml-auto"
+                    disabled={!hasVerifiedLawyers}
+                    title={hasVerifiedLawyers ? undefined : 'Consultations are unavailable until advocate profiles are verified'}
+                    className="py-2 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed text-white text-xs font-bold transition-colors flex items-center gap-2 shadow-xs cursor-pointer ml-auto"
                   >
                     <UserCheck className="w-4 h-4" />
-                    <span>Consult a Nearby Lawyer About This Document</span>
+                    <span>{hasVerifiedLawyers ? 'Consult a Nearby Lawyer About This Document' : 'No verified advocate profiles available'}</span>
                   </button>
                 </div>
               </div>
@@ -809,15 +814,19 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
                     Ready to resolve these flagged clauses?
                   </h4>
                   <p className="text-xs text-blue-100 max-w-xl mt-0.5 leading-relaxed">
-                    Connect directly with verified advocates practicing in {userLocation.city} specializing in {analysisResult.documentType}. Sharing this inquiry with an advocate requires a separate, explicit consent in the consultation form.
+                    {hasVerifiedLawyers
+                      ? `Connect with verified advocates practicing in ${userLocation.city} who specialize in ${analysisResult.documentType}. Sharing this inquiry requires separate, explicit consent.`
+                      : 'Private advocate profiles are hidden until their identities and contact details can be independently verified. Your document review will not be shared.'}
                   </p>
                 </div>
 
                 <button
                   onClick={() => setConsultModalOpen(true)}
-                  className="py-2.5 px-5 rounded-xl bg-white text-blue-950 font-bold text-xs hover:bg-blue-50 transition-colors shadow-xs whitespace-nowrap self-start sm:self-center"
+                  disabled={!hasVerifiedLawyers}
+                  title={hasVerifiedLawyers ? undefined : 'Consultations are unavailable until advocate profiles are verified'}
+                  className="py-2.5 px-5 rounded-xl bg-white text-blue-950 font-bold text-xs hover:bg-blue-50 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed transition-colors shadow-xs whitespace-nowrap self-start sm:self-center"
                 >
-                  Consult Nearby Advocate
+                  {hasVerifiedLawyers ? 'Consult Nearby Advocate' : 'No verified profiles'}
                 </button>
               </div>
             </div>
@@ -839,7 +848,7 @@ DISCLAIMER: This preliminary audit is for educational and legal risk awareness u
       </div>
 
       {/* Connect Lawyer Modal */}
-      {analysisResult && (
+      {analysisResult && hasVerifiedLawyers && (
         <DocumentLawyerConsultModal
           isOpen={consultModalOpen}
           onClose={() => setConsultModalOpen(false)}

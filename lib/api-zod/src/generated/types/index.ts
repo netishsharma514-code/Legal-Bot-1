@@ -7,6 +7,10 @@
  */
 
 export * from './apiError';
+export * from './consultationInquiry';
+export * from './consultationInquiryStatus';
+export * from './consultationInquirySubmission';
+export * from './consultationInquirySubmissionMode';
 export * from './documentAnalysis';
 export * from './documentAnalysisEnvelope';
 export * from './documentAnalysisEnvelopeSource';
@@ -21,6 +25,7 @@ export * from './extractedParty';
 export * from './flaggedClause';
 export * from './flaggedClauseSeverity';
 export * from './healthStatus';
+export * from './lawyerApplicationSubmission';
 export * from './legalChatInput';
 export * from './legalChatReply';
 export * from './legalChatReplySource';
@@ -28,3 +33,4 @@ export * from './legalChatTurn';
 export * from './legalChatTurnSender';
 export * from './legalSection';
 export * from './officialSource';
+export * from './submissionAccepted';

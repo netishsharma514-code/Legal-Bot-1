@@ -21,13 +21,16 @@ import type {
 
 import type {
   ApiError,
+  ConsultationInquirySubmission,
   DocumentAnalysisEnvelope,
   DocumentAnalysisInput,
   DocumentExtractionInput,
   DocumentExtractionResult,
   HealthStatus,
+  LawyerApplicationSubmission,
   LegalChatInput,
-  LegalChatReply
+  LegalChatReply,
+  SubmissionAccepted
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -91,7 +94,7 @@ export const getHealthCheckQueryKey = () => {
     }
 
 
-export const getHealthCheckQueryOptions = <TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getHealthCheckQueryOptions = <TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<ApiError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -110,14 +113,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type HealthCheckQueryResult = NonNullable<Awaited<ReturnType<typeof healthCheck>>>
-export type HealthCheckQueryError = ErrorType<unknown>
+export type HealthCheckQueryError = ErrorType<ApiError>
 
 
 /**
  * @summary Health check
  */
 
-export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>(
+export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<ApiError>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -397,5 +400,181 @@ export const useAnalyzeLegalDocument = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getAnalyzeLegalDocumentMutationOptions(options));
+    }
+
+export const getSubmitConsultationInquiryUrl = () => {
+
+
+
+
+  return `/api/consultation-inquiries`
+}
+
+/**
+ * @summary Store a consented consultation inquiry
+ */
+export const submitConsultationInquiry = async (consultationInquirySubmission: ConsultationInquirySubmission, options?: Parameters<typeof customFetch>[1]): Promise<SubmissionAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SubmissionAccepted>(getSubmitConsultationInquiryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(consultationInquirySubmission)
+  }
+);}
+
+
+
+
+
+export const getSubmitConsultationInquiryMutationKey = () => ['submitConsultationInquiry'] as const;
+
+export const getSubmitConsultationInquiryMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitConsultationInquiry>>, TError,SubmitConsultationInquiryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitConsultationInquiry>>, TError,SubmitConsultationInquiryMutationVariables, TContext> => {
+
+const mutationKey = getSubmitConsultationInquiryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitConsultationInquiry>>, SubmitConsultationInquiryMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitConsultationInquiry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitConsultationInquiryMutationResult = NonNullable<Awaited<ReturnType<typeof submitConsultationInquiry>>>
+    export type SubmitConsultationInquiryMutationBody = BodyType<ConsultationInquirySubmission>
+    export type SubmitConsultationInquiryMutationError = ErrorType<ApiError>
+    export type SubmitConsultationInquiryMutationVariables = {data: BodyType<ConsultationInquirySubmission>}
+
+    /**
+ * @summary Store a consented consultation inquiry
+ */
+export const useSubmitConsultationInquiry = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitConsultationInquiry>>, TError,SubmitConsultationInquiryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitConsultationInquiry>>,
+        TError,
+        SubmitConsultationInquiryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitConsultationInquiryMutationOptions(options));
+    }
+
+export const getSubmitLawyerApplicationUrl = () => {
+
+
+
+
+  return `/api/lawyer-applications`
+}
+
+/**
+ * @summary Store an advocate application for manual review
+ */
+export const submitLawyerApplication = async (lawyerApplicationSubmission: LawyerApplicationSubmission, options?: Parameters<typeof customFetch>[1]): Promise<SubmissionAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SubmissionAccepted>(getSubmitLawyerApplicationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(lawyerApplicationSubmission)
+  }
+);}
+
+
+
+
+
+export const getSubmitLawyerApplicationMutationKey = () => ['submitLawyerApplication'] as const;
+
+export const getSubmitLawyerApplicationMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitLawyerApplication>>, TError,SubmitLawyerApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitLawyerApplication>>, TError,SubmitLawyerApplicationMutationVariables, TContext> => {
+
+const mutationKey = getSubmitLawyerApplicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitLawyerApplication>>, SubmitLawyerApplicationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitLawyerApplication(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitLawyerApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof submitLawyerApplication>>>
+    export type SubmitLawyerApplicationMutationBody = BodyType<LawyerApplicationSubmission>
+    export type SubmitLawyerApplicationMutationError = ErrorType<ApiError>
+    export type SubmitLawyerApplicationMutationVariables = {data: BodyType<LawyerApplicationSubmission>}
+
+    /**
+ * @summary Store an advocate application for manual review
+ */
+export const useSubmitLawyerApplication = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitLawyerApplication>>, TError,SubmitLawyerApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitLawyerApplication>>,
+        TError,
+        SubmitLawyerApplicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitLawyerApplicationMutationOptions(options));
     }
 

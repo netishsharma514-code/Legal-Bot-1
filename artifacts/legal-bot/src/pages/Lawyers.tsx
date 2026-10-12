@@ -4,7 +4,7 @@ import { Lawyer, ConsultationInquiry } from '../data/types';
 import { getStoredLocation, UserLocationState, INDIAN_CITIES } from '../data/location';
 import { LocationSelectorModal } from '../components/LocationSelectorModal';
 import { LegalAidEligibilityModal } from '../components/LegalAidEligibilityModal';
-import { supabase, dbMode } from '../lib/supabase';
+import { submitPublicRequest } from '../lib/api';
 import { 
   Users, 
   Search, 
@@ -43,7 +43,9 @@ type FeeFilter = 'all' | 'free' | 'paid';
 type LanguageMode = 'en' | 'hi' | 'hinglish';
 
 export function Lawyers({ onNavigateTab }: LawyersProps) {
-  const [lawyers] = useState<Lawyer[]>(INITIAL_LAWYERS);
+  const [lawyers] = useState<Lawyer[]>(
+    INITIAL_LAWYERS.filter((lawyer) => lawyer.isVerified && !lawyer.isDemo),
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<string>('All');
   const [selectedSpec, setSelectedSpec] = useState<string>('All');
@@ -115,27 +117,18 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
     return bIsState - aIsState;
   });
 
-  const exactCityMatches = lawyers.filter(
-    (l) => l.city.toLowerCase() === userLocation.city.toLowerCase()
-  );
-
-  const stateMatches = lawyers.filter(
-    (l) => l.state.toLowerCase() === userLocation.state.toLowerCase() && l.city.toLowerCase() !== userLocation.city.toLowerCase()
-  );
-
   const handleSendConsultation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!consultModalLawyer) return;
 
-    if (consultModalLawyer.isDemo) {
-      // Demo profiles must not receive real consultation requests or private documents
+    if (!consultModalLawyer.isVerified || consultModalLawyer.isDemo) {
       return;
     }
 
     setIsSubmitting(true);
     setConsultError(null);
     const inquiry: ConsultationInquiry = {
-      id: `INQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `INQ-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       lawyerId: consultModalLawyer.id,
       lawyerName: consultModalLawyer.name,
       lawyerBarCouncil: consultModalLawyer.barCouncilNumber,
@@ -156,11 +149,10 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
     };
 
     try {
-      const { error } = await supabase.from('consultation_inquiries').insert({
-        ...inquiry,
-        database_mode: dbMode,
+      await submitPublicRequest('consultation-inquiries', {
+        inquiry,
+        mode: consultMode,
       });
-      if (error) throw error;
       setConsultSuccessInquiry(inquiry);
     } catch (err) {
       console.error('Error sending consultation inquiry:', err);
@@ -187,10 +179,10 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
       card2Btn: 'Check Free Legal Aid Eligibility',
       card2SlsaBtn: 'View Nearest DLSA / SLSA',
       card3Title: '3. Private Lawyers',
-      card3Badge: 'Free or Paid Consultations',
-      card3Desc: 'Browse practicing advocates registered with State Bar Councils across High Courts and District Courts. Filter by consultation fee type (free initial or paid).',
-      card3Notice: 'Case-handling and litigation representation fees are determined separately by the advocate. We do not invent fees or credentials.',
-      card3Btn: 'Browse Private Lawyers Below',
+      card3Badge: 'Unavailable until verification',
+      card3Desc: 'No independently verified private advocate profiles are currently available. New profiles will appear only after their credentials and contact details are checked.',
+      card3Notice: 'Private advocate inquiries are disabled until profiles can be independently verified.',
+      card3Btn: 'No verified profiles available',
       demoBadge: 'DEMO PROFILE — NOT VERIFIED',
       demoNotice: 'Sample fee for UI testing only. Fictional profile — cannot receive requests.',
       verifiedBadge: 'Verified Advocate',
@@ -211,10 +203,10 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
       card2Btn: 'मुफ़्त कानूनी सहायता पात्रता जाँचें',
       card2SlsaBtn: 'निकटतम DLSA / SLSA देखें',
       card3Title: '3. प्राइवेट वकील (प्राइवेट एडवोकेट)',
-      card3Badge: 'मुफ़्त या सशुल्क परामर्श',
-      card3Desc: 'स्टेट बार काउंसिल में पंजीकृत वकीलों से संपर्क करें। पहली परामर्श मुफ़्त या सशुल्क के आधार पर फ़िल्टर करें।',
-      card3Notice: 'केस लड़ने की फीस वकील द्वारा अलग से तय की जाती है। हम कोई नकली फीस नहीं दिखाते।',
-      card3Btn: 'प्राइवेट वकील सूची देखें',
+      card3Badge: 'सत्यापन तक अनुपलब्ध',
+      card3Desc: 'अभी कोई स्वतंत्र रूप से सत्यापित निजी वकील प्रोफ़ाइल उपलब्ध नहीं है। नई प्रोफ़ाइल तभी दिखाई जाएगी जब उनकी पहचान और संपर्क विवरण की जाँच हो जाएगी।',
+      card3Notice: 'प्रोफ़ाइल सत्यापित होने तक निजी वकीलों से परामर्श अनुरोध बंद हैं।',
+      card3Btn: 'सत्यापित प्रोफ़ाइल उपलब्ध नहीं',
       demoBadge: 'डेमो प्रोफ़ाइल — असत्यापित (DEMO)',
       demoNotice: 'केवल UI टेस्टिंग हेतु काल्पनिक प्रोफ़ाइल। यह वास्तविक अनुरोध स्वीकार नहीं करता।',
       verifiedBadge: 'सत्यापित वकील',
@@ -235,10 +227,10 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
       card2Btn: 'Check Free Legal Aid Eligibility',
       card2SlsaBtn: 'Nearest DLSA / SLSA Office',
       card3Title: '3. Private Lawyers',
-      card3Badge: 'Free or Paid Consultations',
-      card3Desc: 'High Court aur District Court ke verified advocates se connect karein. Free initial consultation filter karein.',
-      card3Notice: 'Case-handling aur court fees advocate alag se tay karte hain. Koi fake price nahi.',
-      card3Btn: 'Explore Private Lawyers',
+      card3Badge: 'Verification tak unavailable',
+      card3Desc: 'Abhi koi independently verified private advocate profile available nahi hai. Profile tabhi dikhegi jab unki identity aur contact details verify hongi.',
+      card3Notice: 'Profiles verify hone tak private advocate inquiries band hain.',
+      card3Btn: 'Verified profile available nahi',
       demoBadge: 'DEMO PROFILE — NOT VERIFIED',
       demoNotice: 'UI testing ke liye sample profile. Real requests send nahi hote.',
       verifiedBadge: 'Verified Advocate',
@@ -440,7 +432,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
+            <div className={`flex items-center gap-2 pt-1 ${lawyers.length === 0 ? 'hidden' : ''}`}>
               <span className="text-[11px] text-slate-500 font-semibold">Filter fee:</span>
               <button
                 type="button"
@@ -470,11 +462,11 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
           <div className="pt-5 mt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
-              onClick={() => document.getElementById('lawyers-list')?.scrollIntoView({ behavior: 'smooth' })}
-              className="w-full py-2.5 px-4 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer text-center"
+              disabled
+              title="Profiles are hidden until their identity and contact details are verified"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-2 shadow-xs cursor-not-allowed text-center"
             >
               <span>{strings.card3Btn}</span>
-              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -483,7 +475,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
       {/* ========================================================= */}
       {/* LOCATION SELECTOR & SUMMARY RIBBON */}
       {/* ========================================================= */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md border border-blue-800">
+      <div className={`p-4 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md border border-blue-800 ${lawyers.length === 0 ? 'hidden' : ''}`}>
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-blue-800/80 text-blue-200 flex items-center justify-center shrink-0">
             <MapPin className="w-5 h-5" />
@@ -493,7 +485,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
             <div className="text-base font-bold text-white flex items-center gap-2">
               <span>{userLocation.city}, {userLocation.state}</span>
               <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-blue-800 text-blue-200">
-                {exactCityMatches.length} Advocates in City
+                {lawyers.length} Verified Profiles
               </span>
             </div>
           </div>
@@ -529,7 +521,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
       {/* ========================================================= */}
       {/* SEARCH AND FILTER BAR */}
       {/* ========================================================= */}
-      <div id="lawyers-list" className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+      <div id="lawyers-list" className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs ${lawyers.length === 0 ? 'hidden' : ''}`}>
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
           <input
@@ -606,14 +598,12 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
       </div>
 
       {/* Notice if no advocate in user's exact city */}
-      {exactCityMatches.length === 0 && (
+      {sortedLawyers.length === 0 && (
         <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold block">No advocate currently registered directly in {userLocation.city}.</span>
-            <span>
-              Showing advocates across <strong>{userLocation.state}</strong> ({stateMatches.length} available) and High Court benches serving your jurisdiction. Or explore <strong>Free Government Legal Aid (DLSA)</strong> for your district.
-            </span>
+            <span className="font-bold block">Private advocate listings are temporarily unavailable.</span>
+            <span>We removed profiles that could not be independently verified. For legal assistance, check <a className="font-semibold underline" href="https://nalsa.gov.in/" target="_blank" rel="noreferrer">NALSA</a> or contact your district legal services authority.</span>
           </div>
         </div>
       )}
@@ -621,7 +611,7 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
       {/* ========================================================= */}
       {/* LAWYERS GRID */}
       {/* ========================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${sortedLawyers.length === 0 ? 'hidden' : ''}`}>
         {sortedLawyers.map((lawyer) => {
           const isUserCity = lawyer.city.toLowerCase() === userLocation.city.toLowerCase();
           const isUserState = lawyer.state.toLowerCase() === userLocation.state.toLowerCase();
@@ -857,14 +847,12 @@ export function Lawyers({ onNavigateTab }: LawyersProps) {
                 <div className="p-6 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 text-center space-y-3">
                   <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
                   <h4 className="font-bold text-emerald-900 dark:text-emerald-200">
-                    {dbMode === 'local' ? 'Saved in This Browser' : 'Inquiry Saved'}
+                    Inquiry Saved
                   </h4>
                   <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                    {dbMode === 'local'
-                      ? <>Reference ID: <strong>{consultSuccessInquiry.id}</strong>. This inquiry is saved in this browser only and has not been delivered to the advocate.</>
-                      : <>Reference ID: <strong>{consultSuccessInquiry.id}</strong>. This website does not notify the advocate; use the directory contact details to arrange follow-up.</>}
+                    Reference ID: <strong>{consultSuccessInquiry.id}</strong>. This website does not notify the advocate; use the directory contact details to arrange follow-up.
                   </p>
-                  {dbMode !== 'local' && consultModalLawyer && (
+                  {consultModalLawyer && (
                     <div className="flex flex-wrap justify-center gap-4 text-xs font-semibold">
                       <a
                         href={`tel:${consultModalLawyer.phone.replace(/\s+/g, '')}`}

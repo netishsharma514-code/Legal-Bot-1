@@ -15,6 +15,156 @@ export interface ApiError {
   isScannedOrUnreadable?: boolean;
 }
 
+export const SubmissionAcceptedValue = {
+  success: true,
+} as const;
+export type SubmissionAccepted = typeof SubmissionAcceptedValue;
+
+export type ConsultationInquiryStatus = typeof ConsultationInquiryStatus[keyof typeof ConsultationInquiryStatus];
+
+
+export const ConsultationInquiryStatus = {
+  Pending_Advocate_Review: 'Pending Advocate Review',
+} as const;
+
+export interface ConsultationInquiry {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  lawyerId: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  lawyerName: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  lawyerBarCouncil: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  lawyerCourt: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  lawyerCity: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  documentName: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  documentType: string;
+  /** @maxLength 6000 */
+  documentSummary: string;
+  /**
+     * @maxItems 30
+     * @items.minLength 1
+     * @items.maxLength 1000
+     */
+  extractedIssues: string[];
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  userName: string;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  userPhone: string;
+  /** @maxLength 254 */
+  userEmail: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  userLocation: string;
+  /** @maxLength 4000 */
+  userNote?: string;
+  consentGiven: true;
+  status: ConsultationInquiryStatus;
+  createdAt: string;
+}
+
+export type ConsultationInquirySubmissionMode = typeof ConsultationInquirySubmissionMode[keyof typeof ConsultationInquirySubmissionMode];
+
+
+export const ConsultationInquirySubmissionMode = {
+  chamber: 'chamber',
+  phone: 'phone',
+  video: 'video',
+} as const;
+
+export interface ConsultationInquirySubmission {
+  inquiry: ConsultationInquiry;
+  mode?: ConsultationInquirySubmissionMode;
+}
+
+export interface LawyerApplicationSubmission {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  barCouncilNumber: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  state: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  city: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  court: string;
+  /**
+     * @minimum 0
+     * @maximum 70
+     */
+  experienceYears: number;
+  /**
+     * @minItems 1
+     * @maxItems 15
+     * @items.minLength 1
+     * @items.maxLength 100
+     */
+  specializations: string[];
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  phone: string;
+  /** @maxLength 254 */
+  email: string;
+  /** @maxLength 200 */
+  feeEstimate: string;
+  /** @maxLength 4000 */
+  bio: string;
+}
+
 export interface LegalSection {
   id: string;
   act: string;
@@ -55,7 +205,7 @@ export type LegalChatReplySource = typeof LegalChatReplySource[keyof typeof Lega
 
 
 export const LegalChatReplySource = {
-  'gemini-38-flash': 'gemini-3.8-flash',
+  'gemini-25-flash': 'gemini-2.5-flash',
   'statutory-engine': 'statutory-engine',
 } as const;
 
@@ -175,7 +325,7 @@ export type DocumentAnalysisEnvelopeSource = typeof DocumentAnalysisEnvelopeSour
 
 
 export const DocumentAnalysisEnvelopeSource = {
-  'gemini-38-flash': 'gemini-3.8-flash',
+  'gemini-25-flash': 'gemini-2.5-flash',
   'statutory-engine': 'statutory-engine',
 } as const;
 

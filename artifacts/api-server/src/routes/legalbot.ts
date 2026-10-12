@@ -11,6 +11,8 @@ import {
   generateDocumentAnalysisFallback,
   SendLegalChatMessageBody,
   SendLegalChatMessageResponse,
+  ConsultationInquirySubmissionSchema,
+  LawyerApplicationSubmissionSchema,
   type DocumentAnalysis,
 } from '@workspace/api-zod';
 import type { Request, Response } from 'express';
@@ -33,7 +35,76 @@ const ai = apiKey
     })
   : null;
 
-// Legal Chat endpoint powered by Gemini 3.8 Flash
+async function storePrivateSubmission(
+  table: 'consultation_inquiries' | 'lawyer_applications',
+  record: Record<string, unknown>,
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    res.status(503).json({ error: 'Online form submissions are not configured on the server.' });
+    return;
+  }
+
+  try {
+    const response = await fetch(new URL(`/rest/v1/${table}`, supabaseUrl), {
+      method: 'POST',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(record),
+    });
+
+    if (!response.ok) {
+      req.log.error({ statusCode: response.status, table }, 'Supabase rejected a form submission');
+      res.status(502).json({ error: 'The submission could not be stored. Please try again later.' });
+      return;
+    }
+
+    res.status(201).json({ success: true });
+  } catch (error) {
+    req.log.error({ err: error, table }, 'Could not store a form submission');
+    res.status(502).json({ error: 'The submission could not be stored. Please try again later.' });
+  }
+}
+
+router.post('/consultation-inquiries', async (req: Request, res: Response): Promise<void> => {
+  const parsed = ConsultationInquirySubmissionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Please check the consultation details and consent, then try again.' });
+    return;
+  }
+
+  const { inquiry, mode } = parsed.data;
+  await storePrivateSubmission(
+    'consultation_inquiries',
+    { id: inquiry.id, inquiry, mode: mode ?? null },
+    req,
+    res,
+  );
+});
+
+router.post('/lawyer-applications', async (req: Request, res: Response): Promise<void> => {
+  const parsed = LawyerApplicationSubmissionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Please check the advocate application details and try again.' });
+    return;
+  }
+
+  await storePrivateSubmission(
+    'lawyer_applications',
+    { application: parsed.data, status: 'pending' },
+    req,
+    res,
+  );
+});
+
+// Legal Chat endpoint powered by Gemini 2.5 Flash
 router.post('/chat', async (req: Request, res: Response): Promise<void> => {
   try {
     const parsedInput = SendLegalChatMessageBody.safeParse(req.body);
@@ -134,7 +205,7 @@ Conclude with a brief standard disclaimer in the matched language stating that t
 
     const response = await Promise.race([
       ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-2.5-flash',
         contents: promptText,
         config: {
           systemInstruction,
@@ -147,7 +218,7 @@ Conclude with a brief standard disclaimer in the matched language stating that t
     ]);
 
     const reply = response.text || 'Unable to generate response. Please consult statutory lookup.';
-    res.json(SendLegalChatMessageResponse.parse({ reply, source: 'gemini-3.8-flash' }));
+    res.json(SendLegalChatMessageResponse.parse({ reply, source: 'gemini-2.5-flash' }));
   } catch (error) {
     const isGeminiUnavailable =
       typeof error === 'object' &&
@@ -340,7 +411,7 @@ Respond ONLY with valid JSON conforming to this structure. Omit riskScore and ri
 
     const response = await Promise.race([
       ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-2.5-flash',
         contents: promptText,
         config: {
           systemInstruction,
@@ -356,7 +427,7 @@ Respond ONLY with valid JSON conforming to this structure. Omit riskScore and ri
     const parsedData: unknown = JSON.parse(response.text || '{}');
     const validatedResult = AnalyzeLegalDocumentResponse.safeParse({
       analysis: parsedData,
-      source: 'gemini-3.8-flash',
+      source: 'gemini-2.5-flash',
       notice: aiScopeNotice,
     });
     if (validatedResult.success) {

@@ -19,7 +19,7 @@ import {
 import { Lawyer, DocumentAnalysisResult, ConsultationInquiry } from '../data/types';
 import { INITIAL_LAWYERS } from '../data/lawyers';
 import { UserLocationState, matchDocumentTypeToSpecializations } from '../data/location';
-import { supabase, dbMode } from '../lib/supabase';
+import { submitPublicRequest } from '../lib/api';
 
 interface DocumentLawyerConsultModalProps {
   isOpen: boolean;
@@ -64,7 +64,7 @@ export function DocumentLawyerConsultModal({
   const userStateLower = userLocation.state.toLowerCase();
 
   // Filter & prioritize real verified lawyers (exclude fictional demo lawyers to protect privacy):
-  const verifiedLawyers = INITIAL_LAWYERS.filter((l) => !l.isDemo);
+  const verifiedLawyers = INITIAL_LAWYERS.filter((l) => l.isVerified && !l.isDemo);
 
   const citySpecialtyLawyers = verifiedLawyers.filter(
     (l) => l.city.toLowerCase() === userCityLower && l.specializations.some((s) => matchingSpecs.includes(s))
@@ -95,7 +95,8 @@ export function DocumentLawyerConsultModal({
   ];
 
   // Auto-select first verified lawyer if none selected
-  const activeLawyer = selectedLawyer || prioritizedLawyers[0]?.lawyer || verifiedLawyers[0] || INITIAL_LAWYERS[0];
+  const activeLawyer = selectedLawyer || prioritizedLawyers[0]?.lawyer;
+  if (!activeLawyer) return null;
 
   const handleSubmitInquiry = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +114,7 @@ export function DocumentLawyerConsultModal({
 
     const issuesList = analysis.flaggedClauses?.map((c) => `${c.clauseTitle}: ${c.issue}`) || [];
     const inquiryRecord: ConsultationInquiry = {
-      id: `INQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `INQ-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       lawyerId: activeLawyer.id,
       lawyerName: activeLawyer.name,
       lawyerBarCouncil: activeLawyer.barCouncilNumber,
@@ -134,14 +135,10 @@ export function DocumentLawyerConsultModal({
     };
 
     try {
-      // Store in Supabase / Local storage database
-      const { error } = await supabase.from('consultation_inquiries').insert({
-        ...inquiryRecord,
+      await submitPublicRequest('consultation-inquiries', {
+        inquiry: inquiryRecord,
         mode: consultationMode,
-        database_mode: dbMode,
       });
-      if (error) throw error;
-
       setSubmittedInquiry(inquiryRecord);
     } catch (err) {
       console.error('Error saving consultation inquiry:', err);
@@ -211,7 +208,7 @@ export function DocumentLawyerConsultModal({
                 </div>
                 <div>
                   <span className="text-[11px] uppercase tracking-wider font-bold text-emerald-700 dark:text-emerald-400">
-                    {dbMode === 'local' ? 'Saved in This Browser' : 'Inquiry Saved'}
+                    Inquiry Saved
                   </span>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     Inquiry Reference: {submittedInquiry.id}
@@ -251,7 +248,7 @@ export function DocumentLawyerConsultModal({
                     Status: <strong className="text-emerald-700 dark:text-emerald-400">{submittedInquiry.status}</strong>
                   </span>
                   <span className="text-slate-400">
-                    {dbMode === 'local' ? 'Not delivered to the advocate' : 'No advocate notification is sent'}
+                    No advocate notification is sent
                   </span>
                 </div>
               </div>

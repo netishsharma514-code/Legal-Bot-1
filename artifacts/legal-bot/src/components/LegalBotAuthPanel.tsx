@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { ShieldCheck, UserCheck, Lock, Mail, AlertCircle, X } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, AlertCircle, X } from 'lucide-react';
 
 interface LegalBotAuthPanelProps {
   isOpen: boolean;
@@ -21,8 +21,15 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setCurrentUser(null);
+      return;
+    }
     supabase.auth.getUser().then(({ data }) => {
       setCurrentUser(data?.user || null);
+    }).catch((error) => {
+      console.error('Could not load the account session:', error);
+      setErrorMsg('We could not check your account session. Please refresh and try again.');
     });
   }, [isOpen]);
 
@@ -34,11 +41,17 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    if (!isSupabaseConfigured) {
+      setErrorMsg('Online accounts are unavailable until Supabase is configured.');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
-          password: password || 'defaultpass123',
+          password,
         });
         if (error) throw error;
         setCurrentUser(data.user);
@@ -50,7 +63,7 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
-          password: password || 'defaultpass123',
+          password,
           options: {
             data: {
               full_name: fullName || email.split('@')[0],
@@ -60,6 +73,10 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
           },
         });
         if (error) throw error;
+        if (!data.session) {
+          setSuccessMsg('Account created. Check your email to confirm it, then sign in.');
+          return;
+        }
         setCurrentUser(data.user);
         setSuccessMsg('Account registered successfully!');
         setTimeout(() => {
@@ -75,36 +92,16 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setCurrentUser(null);
-    setSuccessMsg('Signed out successfully.');
-    setTimeout(() => {
-      onClose();
-    }, 400);
-  };
-
-  const handleQuickDemo = async (demoRole: 'citizen' | 'lawyer') => {
-    setLoading(true);
-    const demoEmail = demoRole === 'lawyer' ? 'advocate.demo@delhibar.org' : 'citizen.demo@india.org';
+    setErrorMsg(null);
     try {
-      await supabase.auth.signUp({
-        email: demoEmail,
-        password: 'demopassword123',
-        options: {
-          data: {
-            full_name: demoRole === 'lawyer' ? 'Adv. Vikramaditya (Demo)' : 'Aarav Sharma (Citizen)',
-            role: demoRole,
-            bar_council_number: demoRole === 'lawyer' ? 'D/9981/2016' : null,
-          },
-        },
-      });
-      setSuccessMsg(`Entered demo mode as ${demoRole}!`);
-      setTimeout(() => {
-        onAuthSuccess?.();
-        onClose();
-      }, 500);
-    } finally {
-      setLoading(false);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setCurrentUser(null);
+      setSuccessMsg('Signed out successfully.');
+      setTimeout(() => onClose(), 400);
+    } catch (error) {
+      console.error('Could not sign out:', error);
+      setErrorMsg('We could not sign you out. Please try again.');
     }
   };
 
@@ -130,9 +127,17 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
 
         {/* Status Indicator */}
         <div className="my-3 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-          <span>Mode: {isSupabaseConfigured ? 'Live Supabase Cloud' : 'Local Storage Storage'}</span>
-          <span className="font-medium text-emerald-600 dark:text-emerald-400">Secure Session</span>
+          <span>Mode: {isSupabaseConfigured ? 'Live Supabase Cloud' : 'Unavailable — cloud setup required'}</span>
+          {isSupabaseConfigured && (
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">Secure Session</span>
+          )}
         </div>
+
+        {!isSupabaseConfigured && (
+          <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-200">
+            Sign-in and registration require a configured Supabase project. No local demo account is created.
+          </div>
+        )}
 
         {errorMsg && (
           <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
@@ -212,6 +217,7 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
                   <input
                     type="password"
                     required
+                    minLength={isLogin ? undefined : 8}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-600"
@@ -270,31 +276,6 @@ export function LegalBotAuthPanel({ isOpen, onClose, onAuthSuccess }: LegalBotAu
                 {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
               </button>
             </form>
-
-            {/* Quick Demo Access Buttons */}
-            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <div className="text-[11px] text-center text-slate-400 dark:text-slate-500 mb-2">
-                Quick Dev / Demo Access
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('citizen')}
-                  className="py-1.5 px-2 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Demo Citizen</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('lawyer')}
-                  className="py-1.5 px-2 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Demo Advocate</span>
-                </button>
-              </div>
-            </div>
 
             <div className="mt-4 text-center">
               <button
