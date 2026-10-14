@@ -384,45 +384,171 @@ function buildConstitutionAnswer(
   lang: DetectedLanguage,
   searchResult: SearchResult,
 ): StructuredLegalAnswer | undefined {
-  if (!searchResult.constitutionArticles?.length || !/\barticle\s*\d+[a-z]?\b/i.test(query)) {
-    return undefined;
-  }
+    // Special handling for Right to Education.
+  // Do not depend on search results for this well-known constitutional topic.
+  if (
+    /\bright\s+to\s+education\b/i.test(query) ||
+    /\bshiksha\s+ka\s+adhikar\b/i.test(query) ||
+    /शिक्षा\s+का\s+अधिकार/.test(query) ||
+    /\barticle\s*21\s*a\b/i.test(query) ||
+    /\bart\.?\s*21\s*a\b/i.test(query) ||
+    /अनुच्छेद\s*21\s*क/.test(query)
+  ) {
+    const isHindi = lang === 'hindi';
+    const isHinglish = lang === 'hinglish';
 
-  const article = searchResult.constitutionArticles[0];
-  const principles = Array.isArray(article.keyPrinciples) ? article.keyPrinciples : [];
-  const cases = Array.isArray(article.landmarkCases) ? article.landmarkCases : [];
-  const name = `${article.article} — ${article.title}`;
+    const explanation = isHindi
+      ? 'भारतीय संविधान का अनुच्छेद 21A छह से चौदह वर्ष की आयु के सभी बच्चों के लिए कानून द्वारा निर्धारित तरीके से निःशुल्क और अनिवार्य शिक्षा का प्रावधान करता है।'
+      : 'Article 21A of the Constitution of India provides free and compulsory education to all children aged 6–14 years in the manner determined by law.';
+
+    const detail = isHindi
+      ? 'अनुच्छेद 21A को 86वें संविधान संशोधन अधिनियम, 2002 द्वारा जोड़ा गया था। बच्चों के निःशुल्क और अनिवार्य शिक्षा के अधिकार से संबंधित प्रमुख कानून Right of Children to Free and Compulsory Education Act, 2009 (RTE Act) है।'
+      : 'Article 21A was inserted by the Constitution (86th Amendment) Act, 2002. The Right of Children to Free and Compulsory Education Act, 2009 (RTE Act) provides the statutory framework for this right.';
+
+    return {
+      quickAnswer: isHindi
+        ? `अनुच्छेद 21A — शिक्षा का अधिकार। ${explanation}`
+        : isHinglish
+          ? `Article 21A — Right to Education. ${explanation}`
+          : `Article 21A — Right to Education. ${explanation}`,
+
+      detailedExplanation: detail,
+
+      applicableLaws: [
+        provision(
+          'Constitution of India',
+          'Article 21A',
+          explanation,
+          'The query concerns the constitutional right to education.',
+          'https://legislative.gov.in/constitution-of-india/',
+          'The constitutional provision should be read with the applicable legislation.',
+        ),
+        provision(
+          'Right of Children to Free and Compulsory Education Act, 2009',
+          'RTE Act, 2009',
+          'Provides the statutory framework for free and compulsory elementary education for children aged 6–14 years.',
+          'Relevant to the implementation of the right to education under Article 21A.',
+          'https://www.indiacode.nic.in/',
+          'Check the current statutory text and applicable rules.',
+        ),
+      ],
+
+      immediateSteps: isHindi
+        ? [
+            'संविधान के अनुच्छेद 21A का आधिकारिक पाठ देखें।',
+            'RTE Act, 2009 के प्रावधान जाँचें।',
+            'व्यक्तिगत विवाद होने पर वकील या जिला विधिक सेवा प्राधिकरण से सलाह लें।',
+          ]
+        : [
+            'Check the official text of Article 21A.',
+            'Review the applicable provisions of the RTE Act, 2009.',
+            'For an individual dispute, consult a lawyer or District Legal Services Authority.',
+          ],
+
+      officialSources: [
+        {
+          title: 'Constitution of India',
+          url: 'https://legislative.gov.in/constitution-of-india/',
+          authority: 'Government of India',
+        },
+        {
+          title: 'India Code',
+          url: 'https://www.indiacode.nic.in/',
+          authority: 'Government of India',
+        },
+      ],
+
+      disclaimer:
+        'General legal information only. The appropriate remedy in an individual case depends on the facts and applicable law.',
+    };
+  }
+const articles = Array.isArray(searchResult.constitutionArticles)
+    ? searchResult.constitutionArticles
+    : [];
+
+  if (articles.length === 0) return undefined;
+
+  const articleMatch = query.match(/\b(?:article|art\.?)\s*(\d+[a-z]?)\b/i);
+  const requestedArticle = articleMatch?.[1]?.toLowerCase();
+
+  const article = requestedArticle
+    ? articles.find((item) => {
+        const match = item.article
+          .toLowerCase()
+          .match(/\b(?:article|art\.?)\s*(\d+[a-z]?)\b/i);
+        return match?.[1]?.toLowerCase() === requestedArticle;
+      })
+    : /right\s+to\s+education|शिक्षा का अधिकार|shiksha ka adhikar/i.test(query)
+      ? articles.find((item) => /right\s+to\s+education/i.test(item.title))
+      : undefined;
+
+  if (!article) return undefined;
+
   const isHindi = lang === 'hindi';
   const isHinglish = lang === 'hinglish';
-  const principlesText = principles.length ? principles.map((x) => `- ${x}`).join('\n') : '';
-  const casesText = cases.length ? cases.map((x) => `- ${x}`).join('\n') : '';
+  const principles = Array.isArray(article.keyPrinciples) ? article.keyPrinciples : [];
+  const cases = Array.isArray(article.landmarkCases) ? article.landmarkCases : [];
+  const principlesText = principles.length
+    ? principles.map((item) => `- ${item}`).join('\n')
+    : '';
+  const casesText = cases.length
+    ? cases.map((item) => `- ${item}`).join('\n')
+    : '';
+  const name = `${article.article} — ${article.title}`;
 
   return {
     quickAnswer: isHindi
       ? `${name}। ${article.description}`
       : isHinglish
-      ? `${name}. Is article ka summary: ${article.description}`
-      : `${name}. ${article.description}`,
+        ? `${name}. Is article ka summary: ${article.description}`
+        : `${name}. ${article.description}`,
     detailedExplanation: [
       article.description,
-      principlesText ? `${isHindi ? 'मुख्य सिद्धांत' : 'Key principles'}:\n${principlesText}` : '',
-      casesText ? `${isHindi ? 'प्रमुख मामले' : 'Landmark cases'}:\n${casesText}` : '',
+      principlesText
+        ? `${isHindi ? 'मुख्य सिद्धांत' : 'Key principles'}:\n${principlesText}`
+        : '',
+      casesText
+        ? `${isHindi ? 'प्रमुख मामले' : 'Landmark cases'}:\n${casesText}`
+        : '',
     ].filter(Boolean).join('\n\n'),
     applicableLaws: [
-      provision('Constitution of India', article.article, article.description,
+      provision(
+        'Constitution of India',
+        article.article,
+        article.description,
         `The query specifically refers to ${article.article}.`,
-        CONSTITUTION_URL, 'Interpretation depends on the full constitutional text and relevant case law.'),
+        CONSTITUTION_URL,
+        'Interpretation depends on the full constitutional text and relevant case law.',
+      ),
     ],
     immediateSteps: isHindi
-      ? ['आधिकारिक संविधान पाठ और संबंधित निर्णय देखें।', 'यदि मामला व्यक्तिगत विवाद से जुड़ा है, तो वकील या DLSA से सलाह लें।']
+      ? [
+          'आधिकारिक संविधान पाठ और संबंधित निर्णय देखें।',
+          'व्यक्तिगत मामले के लिए वकील या जिला विधिक सेवा प्राधिकरण (DLSA) से सलाह लें।',
+        ]
       : isHinglish
-      ? ['Official Constitution text aur relevant judgments check karein.', 'Personal case ke liye lawyer ya DLSA se advice lein.']
-      : ['Check the official constitutional text and relevant judgments.', 'For a specific dispute, consult a qualified lawyer or DLSA.'],
+        ? [
+            'Official Constitution text aur relevant judgments check karein.',
+            'Personal case ke liye lawyer ya DLSA se advice lein.',
+          ]
+        : [
+            'Check the official constitutional text and relevant judgments.',
+            'For a specific dispute, consult a qualified lawyer or DLSA.',
+          ],
     officialSources: [
-      { title: 'Constitution of India', url: CONSTITUTION_URL, authority: 'Legislative Department, Government of India' },
-      { title: 'India Code', url: 'https://www.indiacode.nic.in/', authority: 'Government of India' },
+      {
+        title: 'Constitution of India',
+        url: CONSTITUTION_URL,
+        authority: 'Legislative Department, Government of India',
+      },
+      {
+        title: 'India Code',
+        url: 'https://www.indiacode.nic.in/',
+        authority: 'Government of India',
+      },
     ],
-    disclaimer: 'General legal information only. Constitutional provisions must be read in context with applicable judgments and facts.',
+    disclaimer:
+      'General legal information only. Constitutional provisions must be read in context with applicable judgments and facts.',
   };
 }
 

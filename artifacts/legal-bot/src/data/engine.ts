@@ -94,39 +94,32 @@ export function searchLegalKnowledge(query: string): SearchResult {
     );
   });
 
-  // Match Constitution Articles
-  const articleMatch = normalized.match(
-    /\barticle\s*(\d+[a-z]?)\b/i
-  );
+   // Match Constitution Articles
+const articleMatch = normalized.match(
+  /\b(?:article|art\.?)\s*(\d+[a-z]?)\b/i
+);
 
-  const requestedArticle = articleMatch?.[1]?.toLowerCase();
+const requestedArticle = articleMatch?.[1]?.toLowerCase();
 
-  const matchedArticles = CONSTITUTION_ARTICLES.filter(c => {
-    const storedMatch = c.article
-      .toLowerCase()
-      .match(/\barticle\s*(\d+[a-z]?)\b/i);
+const matchedArticles = requestedArticle
+  ? CONSTITUTION_ARTICLES.filter(c => {
+      const storedMatch = c.article
+        .toLowerCase()
+        .match(/\b(?:article|art\.?)\s*(\d+[a-z]?)\b/i);
 
-    const storedArticle = storedMatch?.[1]?.toLowerCase();
-
-    // Exact article-number match
-    if (
-      requestedArticle &&
-      storedArticle === requestedArticle
-    ) {
-      return true;
-    }
-
-    // Match article title and description
-    return (
-      c.title.toLowerCase().includes(normalized) ||
-      c.description.toLowerCase().includes(normalized) ||
-      queryWords.some(
-        word =>
-          c.title.toLowerCase().includes(word) ||
-          c.description.toLowerCase().includes(word)
-      )
-    );
-  });
+      return storedMatch?.[1]?.toLowerCase() === requestedArticle;
+    })
+  : CONSTITUTION_ARTICLES.filter(c => {
+      return (
+        c.title.toLowerCase().includes(normalized) ||
+        c.description.toLowerCase().includes(normalized) ||
+        queryWords.some(
+          word =>
+            c.title.toLowerCase().includes(word) ||
+            c.description.toLowerCase().includes(word)
+        )
+      );
+    });
 
   return {
     sections: matchedSections.slice(0, 5),

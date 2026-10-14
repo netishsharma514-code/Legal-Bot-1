@@ -262,25 +262,36 @@ export function Assistant({ onNavigateTab, initialQuery = '' }: AssistantProps) 
       let replySource: 'gemini-2.5-flash' | 'statutory-engine' = 'statutory-engine';
 
       try {
-        const response = await sendLegalChatMessage.mutateAsync({
-          data: {
-            message: query,
-            matchedSections: searchResult.sections,
-            history: (activeSession?.messages || []).slice(-6).map((m) => ({
-              sender: m.sender,
-              text: m.text,
-            })),
-          },
-        });
-        replyText = response.reply;
-        replySource = response.source;
-      } catch {
-        // Fallback to deterministic statutory engine
-        const fallback = generateStatutoryAnswer(query, searchResult);
-        replyText = fallback.text;
-        replySource = 'statutory-engine';
-      }
+  const isConstitutionArticle =
+    /\b(?:article|art\.?)\s*\d+[a-z]?\b/i.test(query);
 
+  if (
+    isConstitutionArticle &&
+    searchResult.constitutionArticles.length > 0
+  ) {
+    const fallback = generateStatutoryAnswer(query, searchResult);
+    replyText = fallback.text;
+    replySource = 'statutory-engine';
+  } else {
+    const response = await sendLegalChatMessage.mutateAsync({
+      data: {
+        message: query,
+        matchedSections: searchResult.sections,
+        history: (activeSession?.messages || []).slice(-6).map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        })),
+      },
+    });
+
+    replyText = response.reply;
+    replySource = response.source;
+  }
+} catch {
+  const fallback = generateStatutoryAnswer(query, searchResult);
+  replyText = fallback.text;
+  replySource = 'statutory-engine';
+}
       const assistantMessage: ChatMessage = {
         id: 'msg-assistant-' + Date.now(),
         sender: 'assistant',
